@@ -1,0 +1,19 @@
+{
+  "name": "rove-plus-whatsapp-api",
+  "version": "1.0.0",
+  "description": "API de WhatsApp (whatsapp-web.js) para o Rove+ Painel",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}

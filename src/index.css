@@ -1,0 +1,380 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-netflix-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scrollbar-width: thin;
+    scrollbar-color: #525252 #0a0a0a;
+  }
+
+  body {
+    @apply bg-netflix-bg text-gray-100 font-sans antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    scrollbar-width: thin;
+    scrollbar-color: #525252 #0a0a0a;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #404040 #111111;
+  }
+
+  *::-webkit-scrollbar {
+    width: 7px;
+    height: 7px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #000000;
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #a3a3a3 0%, #525252 100%);
+    border-radius: 4px;
+    border: 2px solid #000000;
+    min-height: 2.5rem;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #e5e5e5 0%, #a3a3a3 100%);
+  }
+
+  *::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, #ffffff 0%, #d4d4d4 100%);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: #000000;
+  }
+
+  select {
+    @apply text-white;
+  }
+
+  select option {
+    @apply bg-netflix-panel text-white;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-white hover:bg-neutral-200 text-black font-semibold py-3 px-6 rounded-md transition-all duration-200;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.12),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-primary:hover {
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.14),
+      0 8px 20px rgba(0, 0, 0, 0.12);
+  }
+
+  .btn-secondary {
+    @apply bg-netflix-card text-white font-semibold py-3 px-6 rounded-md transition-all duration-200;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  .btn-secondary:hover {
+    @apply bg-white text-black;
+  }
+
+  .card {
+    @apply bg-netflix-card rounded-md transition-all duration-200;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 1px 2px rgba(0, 0, 0, 0.25),
+      8px 0 24px -8px rgba(0, 0, 0, 0.35);
+  }
+
+  .gradient-bg {
+    @apply bg-netflix-bg;
+  }
+
+  .text-gradient {
+    @apply text-white;
+  }
+
+  .glass-effect {
+    @apply bg-white/5 backdrop-blur-md rounded-md;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  /* Bordas por sombra — identidade Plural (como no login) */
+  .plural-edge {
+    border: 0 !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.07),
+      0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  [data-client-theme='light'] .plural-edge {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.08),
+      0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Área cliente — tipografia adaptável ao tema */
+  [data-client-theme='dark'] .ca-fg {
+    @apply text-white;
+  }
+  [data-client-theme='light'] .ca-fg {
+    @apply text-neutral-900;
+  }
+  [data-client-theme='dark'] .ca-fg-icon {
+    @apply text-white;
+  }
+  [data-client-theme='light'] .ca-fg-icon {
+    @apply text-neutral-900;
+  }
+  [data-client-theme='dark'] .ca-hover-fg:hover {
+    @apply text-white;
+  }
+  [data-client-theme='light'] .ca-hover-fg:hover {
+    @apply text-neutral-900;
+  }
+  [data-client-theme='dark'] .ca-panel-hover:hover {
+    @apply bg-white/[0.06];
+  }
+  [data-client-theme='light'] .ca-panel-hover:hover {
+    @apply bg-black/[0.04];
+  }
+  [data-client-theme='dark'] .ca-notif-idle {
+    @apply bg-white/[0.04] text-white;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+  [data-client-theme='light'] .ca-notif-idle {
+    @apply bg-black/[0.03] text-neutral-900;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+  }
+  [data-client-theme='dark'] .ca-notif-idle .ca-notif-title {
+    @apply text-white;
+  }
+  [data-client-theme='light'] .ca-notif-idle .ca-notif-title {
+    @apply text-neutral-900;
+  }
+  [data-client-theme='dark'] .ca-input-plain {
+    @apply bg-[#111] text-white;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+  [data-client-theme='dark'] .ca-input-plain:focus {
+    box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.28);
+  }
+  [data-client-theme='light'] .ca-input-plain {
+    @apply bg-white text-neutral-900;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+  }
+  [data-client-theme='light'] .ca-input-plain:focus {
+    box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.28);
+  }
+
+  [data-client-theme='dark'] .ca-step-num {
+    @apply bg-white text-black;
+  }
+  [data-client-theme='light'] .ca-step-num {
+    @apply bg-black text-white;
+  }
+
+  .plural-edge-soft {
+    border: 0 !important;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+  }
+
+  .plural-header-edge {
+    border: 0 !important;
+    box-shadow:
+      0 1px 0 0 rgba(255, 255, 255, 0.06),
+      0 8px 24px -12px rgba(0, 0, 0, 0.55);
+  }
+
+  .plural-nav-edge {
+    border: 0 !important;
+    box-shadow:
+      0 -1px 0 0 rgba(255, 255, 255, 0.06),
+      0 -12px 32px -8px rgba(0, 0, 0, 0.55);
+  }
+
+  .plural-nav-item {
+    border: 0;
+    box-shadow: none;
+  }
+
+  .plural-nav-item-active {
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.2),
+      0 4px 12px rgba(0, 0, 0, 0.18);
+  }
+
+  /* Tabelas Plural */
+  .plural-table-shell {
+    @apply rounded-md overflow-hidden bg-netflix-card;
+    border: 0 !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 1px 2px rgba(0, 0, 0, 0.25),
+      10px 0 28px -10px rgba(0, 0, 0, 0.4);
+  }
+
+  .plural-table {
+    @apply w-full text-left border-collapse;
+  }
+
+  .plural-table thead {
+    @apply text-[11px] uppercase tracking-wider text-black;
+    background: #fff;
+    box-shadow: inset 0 -1px 0 0 rgba(0, 0, 0, 0.08);
+  }
+
+  .plural-table thead th {
+    @apply px-4 py-3 font-medium whitespace-nowrap;
+  }
+
+  .plural-table tbody tr {
+    box-shadow: inset 0 -1px 0 0 rgba(255, 255, 255, 0.04);
+    transition: background-color 0.15s ease;
+  }
+
+  .plural-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .plural-table tbody tr:last-child {
+    box-shadow: none;
+  }
+
+  .plural-table td {
+    @apply px-4 py-3 text-sm align-middle;
+  }
+
+  .plural-table-foot {
+    @apply px-4 py-3 text-sm;
+    background: rgba(255, 255, 255, 0.02);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .plural-badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .rove-date-input {
+    @apply relative pr-10;
+    color-scheme: dark;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+
+  .rove-date-input::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 2.75rem;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .rove-date-input::-moz-calendar-picker-indicator {
+    opacity: 0;
+  }
+
+  .rove-date-input::-webkit-datetime-edit {
+    @apply text-white;
+  }
+
+  .rove-date-input::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+  }
+
+  .rove-date-input::-webkit-datetime-edit-text {
+    @apply text-gray-500;
+    padding: 0 0.15rem;
+  }
+
+  .rove-date-input[value='']::-webkit-datetime-edit-day-field,
+  .rove-date-input[value='']::-webkit-datetime-edit-month-field,
+  .rove-date-input[value='']::-webkit-datetime-edit-year-field,
+  .rove-date-input:not([value])::-webkit-datetime-edit-day-field,
+  .rove-date-input:not([value])::-webkit-datetime-edit-month-field,
+  .rove-date-input:not([value])::-webkit-datetime-edit-year-field {
+    @apply text-gray-500;
+  }
+
+  /* Scroll fino em painéis internos (dropdowns, modais, tabelas) */
+  .rove-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #525252 #0a0a0a;
+  }
+
+  .rove-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .rove-scrollbar::-webkit-scrollbar-track {
+    background: rgba(10, 10, 10, 0.85);
+    border-radius: 4px;
+    margin: 4px 0;
+  }
+
+  .rove-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(163, 163, 163, 0.95) 0%, rgba(82, 82, 82, 0.95) 100%);
+    border-radius: 4px;
+    border: 1.5px solid rgba(10, 10, 10, 0.9);
+  }
+
+  .rove-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #e5e5e5 0%, #a3a3a3 100%);
+  }
+}
+
+@layer utilities {
+  .animation-delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .animation-delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .animation-delay-600 {
+    animation-delay: 600ms;
+  }
+
+  .plural-wordmark-mask {
+    -webkit-mask-image: url('/logo/plural-wordmark.png');
+    mask-image: url('/logo/plural-wordmark.png');
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: left center;
+    mask-position: left center;
+    -webkit-mask-source-type: luminance;
+    mask-mode: luminance;
+  }
+
+  .plural-mark-mask {
+    -webkit-mask-image: url('/logo/plural-mark.png');
+    mask-image: url('/logo/plural-mark.png');
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-source-type: luminance;
+    mask-mode: luminance;
+  }
+}

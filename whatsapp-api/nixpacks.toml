@@ -1,0 +1,26 @@
+# Fallback se o Railway não usar Dockerfile — instala Chromium do sistema
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+PUPPETEER_EXECUTABLE_PATH = "/usr/bin/chromium"
+WWEBJS_AUTH_PATH = "/data/.wwebjs_auth"
+
+[phases.setup]
+aptPkgs = [
+  "chromium",
+  "libglib2.0-0",
+  "libnss3",
+  "libgbm1",
+  "libasound2",
+  "libatk-bridge2.0-0",
+  "libatk1.0-0",
+  "libcups2",
+  "libdrm2",
+  "libgtk-3-0",
+  "libx11-xcb1",
+  "libxcomposite1",
+  "libxdamage1",
+  "libxfixes3",
+  "libxrandr2",
+  "fonts-liberation",
+  "ca-certificates",
+]
