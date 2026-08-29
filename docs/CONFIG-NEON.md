@@ -38,7 +38,7 @@ DATABASE_URL="postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslm
 DIRECT_URL="postgresql://user:password@ep-xxx.region.aws.neon.tech/neondb?sslmode=require"
 
 JWT_SECRET="uma-chave-secreta"
-ADMIN_EMAIL="admin@roveplus.com"
+ADMIN_EMAIL="admin@plural.com"
 ADMIN_PASSWORD="admin123"
 ```
 

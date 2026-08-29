@@ -63,11 +63,11 @@ async function main() {
   }
 
   // Passo 5: Login funciona
-  const loginOk = await passo(5, 'Login (admin@roveplus.com)', async () => {
+  const loginOk = await passo(5, 'Login (admin@plural.com)', async () => {
     const res = await fetch('http://localhost:3001/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@roveplus.com', password: 'admin123' }),
+      body: JSON.stringify({ email: 'admin@plural.com', password: 'admin123' }),
     })
     const data = await res.json().catch(() => ({}))
     if (res.ok && data?.user) return true
@@ -83,7 +83,7 @@ async function main() {
     const loginRes = await fetch('http://localhost:3001/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@roveplus.com', password: 'admin123' }),
+      body: JSON.stringify({ email: 'admin@plural.com', password: 'admin123' }),
     })
     const setCookie = loginRes.headers.get('set-cookie')
     if (!setCookie) throw new Error('Sem cookie de sessão')

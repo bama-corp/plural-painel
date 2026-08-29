@@ -21,7 +21,7 @@ npm run db:seed
 npm run dev:all
 ```
 
-Abrir http://localhost:3000 → login: **admin@roveplus.com** / **admin123**.
+Abrir http://localhost:3000 → login: **admin@plural.com** / **admin123**.
 
 ---
 
