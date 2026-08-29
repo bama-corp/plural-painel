@@ -283,7 +283,7 @@ export default function Salas() {
                       {s.email || '—'}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-400 font-mono">
-                      {s.senha ? '••••••••' : '—'}
+                      {s.senha || (s as Sala & { senhaSet?: boolean }).senhaSet ? '••••••••' : '—'}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className="font-medium text-white">{s.totalClientes}</span>
@@ -341,18 +341,25 @@ export default function Salas() {
                         )}
                         <button
                           type="button"
-                          onClick={() => {
-                            setForm({
-                              id: s.id,
-                              nome: s.nome,
-                              email: s.email ?? '',
-                              senha: s.senha ?? '',
-                              observacoes: s.observacoes ?? '',
-                              dataFim: s.dataFim ? String(s.dataFim).slice(0, 10) : '',
-                              status: s.status,
-                            })
-                            setShowSenha(false)
-                            setModal('edit')
+                          onClick={async () => {
+                            try {
+                              const detail = await api.get<Sala & { senha?: string | null }>(
+                                `/api/salas/${s.id}?includeSenha=1`
+                              )
+                              setForm({
+                                id: detail.id,
+                                nome: detail.nome,
+                                email: detail.email ?? '',
+                                senha: detail.senha ?? '',
+                                observacoes: detail.observacoes ?? '',
+                                dataFim: detail.dataFim ? String(detail.dataFim).slice(0, 10) : '',
+                                status: detail.status ?? s.status,
+                              })
+                              setShowSenha(false)
+                              setModal('edit')
+                            } catch (e) {
+                              showError(e instanceof Error ? e.message : 'Erro ao carregar sala')
+                            }
                           }}
                           title="Editar"
                           className="inline-flex items-center justify-center h-8 px-3 rounded-md border border-primary-500/50 bg-primary-500/10 text-primary-300 hover:bg-primary-500/30 hover:text-white hover:border-primary-400 shadow-sm shadow-primary-900/40 transition-colors"

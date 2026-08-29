@@ -18,6 +18,7 @@ import {
   setPortalPinPlainInDb,
 } from '../lib/portalPinPlain.js'
 import { ensureClientRoveId, getRoveIdsMap } from '../lib/roveId.js'
+import { decryptField, encryptField } from '../lib/fieldCrypto.js'
 
 const router = Router()
 
@@ -26,6 +27,44 @@ router.use(authMiddleware)
 function stripPortalPinHash<T extends Record<string, unknown>>(c: T) {
   const { portalPinHash: _p, portalPinPlain: _pp, ...rest } = c
   return rest
+}
+
+/** Lista: sem iptvPass/pin/senha da sala. */
+function sanitizeClientListItem(c: Record<string, unknown>) {
+  const {
+    portalPinHash: _h,
+    portalPinPlain: _pp,
+    iptvPass: _pass,
+    pin: _pin,
+    ...rest
+  } = c
+  const sala = rest.sala as Record<string, unknown> | null | undefined
+  if (sala && typeof sala === 'object') {
+    const { senha: _s, ...salaRest } = sala
+    rest.sala = { ...salaRest, senhaSet: !!_s }
+  }
+  return {
+    ...rest,
+    iptvPassSet: !!_pass,
+    pinSet: !!_pin,
+  }
+}
+
+/** Detalhe: credenciais decifradas; sem hashes. */
+function sanitizeClientDetail(c: Record<string, unknown>, opts?: { portalPinPlain?: string | null }) {
+  const base = stripPortalPinHash(c)
+  const sala = base.sala as Record<string, unknown> | null | undefined
+  if (sala && typeof sala === 'object') {
+    const { senha: _s, ...salaRest } = sala
+    base.sala = { ...salaRest, senhaSet: !!_s }
+  }
+  return {
+    ...base,
+    pin: decryptField(c.pin as string | null),
+    iptvPass: decryptField(c.iptvPass as string | null),
+    iptvPassSet: !!(c.iptvPass && String(c.iptvPass).length > 0),
+    ...(opts?.portalPinPlain !== undefined ? { portalPinPlain: opts.portalPinPlain } : {}),
+  }
 }
 
 async function ensurePortalFirstLoginColumn(): Promise<void> {
@@ -47,6 +86,8 @@ router.get('/', async (req, res) => {
   const { servico, servidorId, status, vencendo, revendedorId, salaId, q, inscricaoPaga } = req.query
   const user = (req as unknown as { user: AuthPayload }).user
   const includePortalPin = user.role === 'admin' && String(req.query.includePortalPin) === '1'
+  const includeCredenciais =
+    canManageClients(user.role) && String(req.query.includeCredenciais) === '1'
   const roleFilter = getRoleServicoFilter(user.role)
   await ensurePortalPinPlainColumn().catch(() => {})
 
@@ -126,7 +167,10 @@ router.get('/', async (req, res) => {
   ])
   const enriched = clients.map((c) => {
     const areaClienteAtiva = !!c.portalPinHash
-    const base = stripPortalPinHash({ ...c, valor: Number(c.valor) } as Record<string, unknown>)
+    const raw = { ...c, valor: Number(c.valor) } as Record<string, unknown>
+    const base = includeCredenciais
+      ? sanitizeClientDetail(raw)
+      : sanitizeClientListItem(raw)
     const fromDb = pinPlainById?.get(Number(c.id))
     return {
       ...base,
@@ -152,7 +196,7 @@ router.get('/:id', async (req, res) => {
   if (!canAccessServico(user.role, client.servico)) return res.status(403).json({ error: 'Sem acesso a este cliente' })
   const roveId = await ensureClientRoveId(client.id)
   res.json({
-    ...stripPortalPinHash({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
+    ...sanitizeClientDetail({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
     roveId,
     areaClienteAtiva: !!client.portalPinHash,
   })
@@ -190,9 +234,9 @@ router.post('/', auditLog('create_client', 'client'), async (req, res) => {
       servidorId: body.servidorId ? Number(body.servidorId) : null,
       revendedorId: body.revendedorId ? Number(body.revendedorId) : null,
       perfil: body.perfil || null,
-      pin: body.pin || null,
+      pin: body.pin != null && String(body.pin) !== '' ? encryptField(String(body.pin)) : null,
       iptvUser: body.iptvUser || null,
-      iptvPass: body.iptvPass || null,
+      iptvPass: body.iptvPass != null && String(body.iptvPass) !== '' ? encryptField(String(body.iptvPass)) : null,
       iptvMac: body.iptvMac || null,
       iptvM3u: body.iptvM3u || null,
       dataInicio: body.dataInicio ? new Date(body.dataInicio) : new Date(),
@@ -230,7 +274,7 @@ router.post('/', auditLog('create_client', 'client'), async (req, res) => {
   }
   const roveId = await ensureClientRoveId(client.id)
   res.status(201).json({
-    ...stripPortalPinHash({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
+    ...sanitizeClientDetail({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
     roveId,
     areaClienteAtiva: !!client.portalPinHash,
   })
@@ -262,9 +306,13 @@ router.patch('/:id', auditLog('update_client', 'client'), async (req, res) => {
   if (body.servidorId != null) data.servidorId = body.servidorId ? Number(body.servidorId) : null
   if (body.revendedorId !== undefined) data.revendedorId = body.revendedorId ? Number(body.revendedorId) : null
   if (body.perfil != null) data.perfil = body.perfil
-  if (body.pin !== undefined) data.pin = body.pin || null
+  if (body.pin !== undefined) {
+    data.pin = body.pin != null && String(body.pin) !== '' ? encryptField(String(body.pin)) : null
+  }
   if (body.iptvUser != null) data.iptvUser = body.iptvUser
-  if (body.iptvPass != null) data.iptvPass = body.iptvPass
+  if (body.iptvPass != null) {
+    data.iptvPass = String(body.iptvPass) !== '' ? encryptField(String(body.iptvPass)) : null
+  }
   if (body.iptvMac != null) data.iptvMac = body.iptvMac
   if (body.iptvM3u != null) data.iptvM3u = body.iptvM3u
   if (body.dataInicio != null) data.dataInicio = new Date(body.dataInicio)
@@ -333,7 +381,7 @@ router.patch('/:id', auditLog('update_client', 'client'), async (req, res) => {
   }
   const iptvChanged =
     (body.iptvUser != null && body.iptvUser !== existing.iptvUser) ||
-    (body.iptvPass != null && body.iptvPass !== existing.iptvPass) ||
+    (body.iptvPass != null && String(body.iptvPass) !== (decryptField(existing.iptvPass) ?? '')) ||
     (body.iptvMac != null && body.iptvMac !== existing.iptvMac) ||
     (body.iptvM3u != null && body.iptvM3u !== existing.iptvM3u)
   if (iptvChanged && client.servico === 'iptv') {
@@ -343,7 +391,7 @@ router.patch('/:id', auditLog('update_client', 'client'), async (req, res) => {
     ).catch(() => {})
   }
   const netflixChanged =
-    (body.pin !== undefined && body.pin !== existing.pin) ||
+    (body.pin !== undefined && String(body.pin || '') !== (decryptField(existing.pin) ?? '')) ||
     (body.perfil != null && body.perfil !== existing.perfil)
   if (netflixChanged && client.servico === 'netflix') {
     void sendWhatsAppMessage(
@@ -354,7 +402,7 @@ router.patch('/:id', auditLog('update_client', 'client'), async (req, res) => {
 
   const roveId = await ensureClientRoveId(client.id)
   res.json({
-    ...stripPortalPinHash({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
+    ...sanitizeClientDetail({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
     roveId,
     areaClienteAtiva: !!client.portalPinHash,
   })
@@ -410,7 +458,7 @@ router.post('/:id/renovar', auditLog('renew_client', 'client'), async (req, res)
     void sendWhatsAppMessage(client.whatsapp, msg).catch(() => {})
   }
   res.json({
-    ...stripPortalPinHash({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
+    ...sanitizeClientDetail({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
     areaClienteAtiva: !!updated.portalPinHash,
   })
 })
@@ -435,7 +483,7 @@ router.post('/:id/marcar-pago', auditLog('mark_paid_client', 'client'), async (r
   const msgPago = templates.pagamentoRegistado(updated.nome, fimStr)
   void sendWhatsAppMessage(updated.whatsapp, msgPago).catch(() => {})
   res.json({
-    ...stripPortalPinHash({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
+    ...sanitizeClientDetail({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
     areaClienteAtiva: !!updated.portalPinHash,
   })
 })
@@ -461,7 +509,7 @@ router.post('/:id/suspender', auditLog('suspend_client', 'client'), async (req, 
     `Cliente suspenso: ${updated.nome} (${updated.whatsapp}).`
   )
   res.json({
-    ...stripPortalPinHash({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
+    ...sanitizeClientDetail({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
     areaClienteAtiva: !!updated.portalPinHash,
   })
 })
@@ -494,7 +542,7 @@ router.post('/:id/ativar', auditLog('activate_client', 'client'), async (req, re
     `Cliente reativado: ${updated.nome} — renovação ${fimStr}.`
   )
   res.json({
-    ...stripPortalPinHash({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
+    ...sanitizeClientDetail({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
     areaClienteAtiva: !!updated.portalPinHash,
   })
 })

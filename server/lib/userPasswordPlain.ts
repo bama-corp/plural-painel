@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs'
 import { prisma } from './prisma.js'
+import { decryptField, encryptField } from './fieldCrypto.js'
 
 let userPasswordPlainColumnReady = false
 
@@ -19,7 +20,8 @@ export async function setUserPasswordPlainInDb(userId: number, plain: string | n
   if (plain == null || String(plain) === '') {
     await prisma.$executeRawUnsafe('UPDATE "User" SET password_plain = NULL WHERE id = $1', id)
   } else {
-    await prisma.$executeRawUnsafe('UPDATE "User" SET password_plain = $1 WHERE id = $2', String(plain), id)
+    const stored = encryptField(String(plain))
+    await prisma.$executeRawUnsafe('UPDATE "User" SET password_plain = $1 WHERE id = $2', stored, id)
   }
 }
 
@@ -42,7 +44,7 @@ export async function getUserPasswordPlainMap(ids: number[]): Promise<Map<number
     `SELECT id, password_plain FROM "User" WHERE id IN (${clean.join(',')})`
   )
   for (const r of rows) {
-    map.set(Number(r.id), r.password_plain ?? null)
+    map.set(Number(r.id), decryptField(r.password_plain))
   }
   return map
 }

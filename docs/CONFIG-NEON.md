@@ -71,3 +71,16 @@ npm run db:seed
 | 5 | Browser | http://localhost:3000 → login com `ADMIN_EMAIL` / `ADMIN_PASSWORD` |
 
 Em produção (ex.: Vercel), define as mesmas variáveis `DATABASE_URL` e `DIRECT_URL` no ambiente do deploy.
+
+---
+
+## 6. Rodar credenciais (obrigatório se alguma vez foram expostas)
+
+Se a connection string Neon, `JWT_SECRET` ou outras chaves alguma vez estiveram no git (ex.: `.env.example` no First Commit), trata-as como comprometidas:
+
+1. **Neon** → projeto → **Settings** / **Reset password** (ou Roles → reset da password do role) → atualiza `DATABASE_URL` e `DIRECT_URL` no `.env` local e na Vercel.
+2. **JWT_SECRET** → gera um valor novo (`openssl rand -hex 32`) e define-o na Vercel e no `.env`. Todas as sessões ativas deixam de ser válidas (utilizadores voltam a fazer login).
+3. **FIELD_ENCRYPTION_KEY** → gera 32 bytes em base64 e define no ambiente **antes** de gravar novas senhas/PINs cifrados. Se mudares a chave depois, valores já cifrados deixam de ser legíveis até regravá-los no painel.
+4. **WHATSAPP_TOKEN** / **CRON_SECRET** → regenera se estiverem no histórico ou partilhados.
+
+Confirma que `.env` está no `.gitignore` e que `.env.example` só tem placeholders (`USER`, `PASSWORD`, etc.).

@@ -2,6 +2,7 @@
  * Origens CORS: variável CORS_ORIGINS (lista separada por vírgulas: https://a.com,https://b.com).
  * Em produção, se existir VERCEL_URL, adiciona-se https://<VERCEL_URL> automaticamente.
  * Em desenvolvimento (NODE_ENV !== 'production') usa-se `origin: true` para o Vite (localhost) sem configuração.
+ * Em produção sem nenhuma origem configurada, pedidos browser (com Origin) são rejeitados.
  */
 export function getCorsOptions() {
   const raw = process.env.CORS_ORIGINS || ''
@@ -25,15 +26,15 @@ export function getCorsOptions() {
     credentials: true,
     maxAge: 86400,
     origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // Postman, curl, server-to-server, alguns clientes móveis
+      // Postman, curl, server-to-server, cron, alguns clientes móveis
       if (!origin) {
         return callback(null, true)
       }
       if (allowed.length === 0) {
-        console.warn(
-          '[CORS] Em produção sem CORS_ORIGINS nem derivado; a aceitar a origem do pedido. Defina CORS_ORIGINS (domínio do painel).'
+        console.error(
+          '[CORS] Em produção sem CORS_ORIGINS nem VERCEL_URL — a rejeitar a origem do pedido. Defina CORS_ORIGINS.'
         )
-        return callback(null, true)
+        return callback(null, false)
       }
       return callback(null, allowed.includes(origin))
     },

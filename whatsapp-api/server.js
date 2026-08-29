@@ -161,8 +161,10 @@ app.use(express.json({ limit: '64kb' }))
 
 function authMiddleware(req, res, next) {
   if (!WHATSAPP_TOKEN) {
-    console.warn('[Auth] WHATSAPP_TOKEN não definido — API exposta sem proteção.')
-    return next()
+    return res.status(503).json({
+      success: false,
+      error: 'WHATSAPP_TOKEN não definido. A API não aceita pedidos sem token.',
+    })
   }
   const authHeader = req.headers.authorization || ''
   if (!authHeader.startsWith('Bearer ')) {
@@ -173,6 +175,24 @@ function authMiddleware(req, res, next) {
     return res.status(401).json({ success: false, error: 'Token inválido' })
   }
   next()
+}
+
+/** Bearer ou ?token= (para abrir /pair no browser no Railway). */
+function pairAuth(req, res, next) {
+  if (!WHATSAPP_TOKEN) {
+    return res.status(503).type('html').send(
+      '<!DOCTYPE html><html lang="pt"><body><p>WHATSAPP_TOKEN não definido. Defina o token no ambiente.</p></body></html>'
+    )
+  }
+  const authHeader = req.headers.authorization || ''
+  const bearer = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : ''
+  const queryToken = typeof req.query.token === 'string' ? req.query.token : ''
+  if (bearer === WHATSAPP_TOKEN || queryToken === WHATSAPP_TOKEN) {
+    return next()
+  }
+  return res.status(401).type('html').send(
+    '<!DOCTYPE html><html lang="pt"><head><meta charset="utf-8"/><title>Não autorizado</title></head><body style="font-family:system-ui;background:#0a0a0c;color:#eee;padding:24px;text-align:center"><p>Acesso negado. Use <code>/pair?token=SEU_WHATSAPP_TOKEN</code>.</p></body></html>'
+  )
 }
 
 app.get('/health', (_req, res) => {
@@ -221,8 +241,8 @@ app.get('/qr', authMiddleware, async (_req, res) => {
   }
 })
 
-/** Página HTML para parear WhatsApp (útil no Railway). */
-app.get('/pair', async (_req, res) => {
+/** Página HTML para parear WhatsApp (útil no Railway). Protegida com Bearer ou ?token=. */
+app.get('/pair', pairAuth, async (_req, res) => {
   if (isConnected) {
     return res.type('html').send(`<!DOCTYPE html>
 <html lang="pt"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -324,10 +344,13 @@ app.post('/send', authMiddleware, async (req, res) => {
 })
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`API WhatsApp Rove+ em http://0.0.0.0:${PORT}`)
-  console.log('Endpoints: GET /health, GET /pair, GET /status, POST /send')
-  console.log(`Sessão: ${WWEBJS_AUTH_PATH}`)
   if (!WHATSAPP_TOKEN) {
-    console.warn('[Aviso] Defina WHATSAPP_TOKEN em produção.')
+    console.error('[FATAL] Defina WHATSAPP_TOKEN. Sem token a API rejeita todos os pedidos protegidos.')
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1)
+    }
   }
+  console.log(`API WhatsApp Rove+ em http://0.0.0.0:${PORT}`)
+  console.log('Endpoints: GET /health, GET /pair?token=…, GET /status, POST /send')
+  console.log(`Sessão: ${WWEBJS_AUTH_PATH}`)
 })

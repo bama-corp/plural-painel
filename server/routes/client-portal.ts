@@ -17,6 +17,7 @@ import {
   getAssistantReply,
   type ClientAssistantContext,
 } from '../lib/clientAssistant.js'
+import { decryptField } from '../lib/fieldCrypto.js'
 
 const router = Router()
 const JWT_SECRET = process.env.JWT_SECRET || 'change-me-in-production'
@@ -179,15 +180,14 @@ router.get('/me', clientPortalMiddleware, async (req, res) => {
     dataFim: client.dataFim,
     valor: Number(client.valor),
     perfil: client.perfil,
-    pin: client.pin,
+    pin: decryptField(client.pin),
     localizacao: client.localizacao,
     sala: client.sala,
     servidor: client.servidor,
     revendedor: client.revendedor,
     iptvUser: client.iptvUser,
     iptvPassSet: !!(client.iptvPass && String(client.iptvPass).length > 0),
-    iptvPass:
-      client.iptvPass && String(client.iptvPass).length > 0 ? String(client.iptvPass) : null,
+    iptvPass: decryptField(client.iptvPass),
     iptvMac: client.iptvMac,
     roveId,
     iptvM3u: client.iptvM3u,
@@ -467,9 +467,9 @@ async function loadAssistantContext(clientId: number): Promise<ClientAssistantCo
     dataFim: client.dataFim,
     valor: Number(client.valor),
     perfil: client.perfil,
-    pin: client.pin,
+    pin: decryptField(client.pin),
     iptvUser: client.iptvUser,
-    iptvPass: client.iptvPass && String(client.iptvPass).length > 0 ? String(client.iptvPass) : null,
+    iptvPass: decryptField(client.iptvPass),
     iptvMac: client.iptvMac,
     iptvM3u: client.iptvM3u,
     inscricaoPaga: client.inscricaoPaga,

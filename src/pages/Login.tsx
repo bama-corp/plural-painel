@@ -74,25 +74,6 @@ export default function Login() {
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail('admin@roveplus.com')
-                  setPassword('admin123')
-                }}
-                className={`w-full rounded-md bg-white px-3.5 py-3 text-left transition-shadow hover:shadow-[0_1px_3px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.12)] ${fieldShadow}`}
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-400">
-                  Acesso provisório
-                </p>
-                <p className="mt-1 text-sm text-black">
-                  <span className="font-medium">admin@roveplus.com</span>
-                  <span className="text-neutral-400"> · </span>
-                  <span className="font-mono text-[13px]">admin123</span>
-                </p>
-                <p className="mt-0.5 text-xs text-neutral-400">Clique para preencher</p>
-              </button>
-
               <div className="space-y-1.5">
                 <label htmlFor="login-email" className="block text-sm font-semibold text-black">
                   Email

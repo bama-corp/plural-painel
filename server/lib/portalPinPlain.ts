@@ -1,4 +1,5 @@
 import { prisma } from './prisma.js'
+import { decryptField, encryptField } from './fieldCrypto.js'
 
 let portalPinPlainColumnReady = false
 
@@ -18,7 +19,8 @@ export async function setPortalPinPlainInDb(clientId: number, plain: string | nu
   if (plain == null || String(plain) === '') {
     await prisma.$executeRawUnsafe('UPDATE clients SET portal_pin_plain = NULL WHERE id = $1', id)
   } else {
-    await prisma.$executeRawUnsafe('UPDATE clients SET portal_pin_plain = $1 WHERE id = $2', String(plain), id)
+    const stored = encryptField(String(plain))
+    await prisma.$executeRawUnsafe('UPDATE clients SET portal_pin_plain = $1 WHERE id = $2', stored, id)
   }
 }
 
@@ -42,7 +44,7 @@ export async function getPortalPinPlainMap(ids: number[]): Promise<Map<number, s
   )
   for (const r of rows) {
     const id = Number(r.id)
-    map.set(id, r.portal_pin_plain ?? null)
+    map.set(id, decryptField(r.portal_pin_plain))
   }
   return map
 }

@@ -38,9 +38,9 @@ Sem volume, terás de escanear o QR em cada redeploy.
 
 ## 2. Ligar o WhatsApp (QR Code)
 
-1. Após o deploy, abre no browser:
+1. Após o deploy, abre no browser (obrigatório o mesmo `WHATSAPP_TOKEN`):
    ```
-   https://SEU-DOMINIO-RAILWAY/pair
+   https://SEU-DOMINIO-RAILWAY/pair?token=SEU_WHATSAPP_TOKEN
    ```
 2. No telemóvel: **WhatsApp → Dispositivos ligados → Ligar dispositivo** → escaneia o QR.
 3. Confirma: `GET https://SEU-DOMINIO/health` → `{ "ok": true, "whatsapp": true }`.
@@ -109,7 +109,7 @@ WHATSAPP_API_URL=https://SEU-DOMINIO-RAILWAY WHATSAPP_TOKEN=seu_token node test-
 | Método | Rota | Auth | Descrição |
 |--------|------|------|-----------|
 | GET | `/health` | Não | Health check |
-| GET | `/pair` | Não | Página QR para parear |
+| GET | `/pair` | Bearer ou `?token=` | Página QR para parear |
 | GET | `/status` | Bearer | Estado da ligação |
 | GET | `/qr` | Bearer | QR em JSON (data URL) |
 | POST | `/send` | Bearer | Enviar mensagem `{ phone, message }` |
@@ -120,7 +120,7 @@ WHATSAPP_API_URL=https://SEU-DOMINIO-RAILWAY WHATSAPP_TOKEN=seu_token node test-
 
 | Problema | Solução |
 |----------|---------|
-| `503 WhatsApp não conectado` | Abrir `/pair` e escanear QR |
+| `503 WhatsApp não conectado` | Abrir `/pair?token=…` e escanear QR |
 | Sessão perdida após deploy | Verificar volume montado em `/data` |
 | `401 Token inválido` | `WHATSAPP_TOKEN` igual no Railway e na Vercel |
 | Mensagens não saem no cron | Confirmar `WHATSAPP_API_URL` + redeploy Vercel; ver logs da função |

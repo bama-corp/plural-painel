@@ -205,6 +205,7 @@ export default function Clientes() {
     if (filter.salaId) params.set('salaId', filter.salaId)
     if (filter.status) params.set('status', filter.status)
     if (filter.vencendo) params.set('vencendo', filter.vencendo)
+    if (showNetflixPins) params.set('includeCredenciais', '1')
     const q = searchQuery.trim()
     if (q) params.set('q', q)
     api
@@ -224,7 +225,7 @@ export default function Clientes() {
 
   useEffect(() => {
     load()
-  }, [filter.servico, filter.servidorId, filter.revendedorId, filter.salaId, filter.status, filter.vencendo, searchDebounced])
+  }, [filter.servico, filter.servidorId, filter.revendedorId, filter.salaId, filter.status, filter.vencendo, searchDebounced, showNetflixPins])
 
   useEffect(() => {
     setTablePage(1)
@@ -716,7 +717,11 @@ export default function Clientes() {
                       )}
                       {tab === 'netflix' && (
                         <td className="px-4 py-3 text-sm text-gray-300 font-mono">
-                          {!c.pin ? '—' : showNetflixPins ? c.pin : '••••'}
+                          {!c.pin && !(c as Client & { pinSet?: boolean }).pinSet
+                            ? '—'
+                            : showNetflixPins && c.pin
+                              ? c.pin
+                              : '••••'}
                         </td>
                       )}
                       <td className="px-4 py-3 text-sm text-gray-400">{c.localizacao || '—'}</td>
@@ -781,14 +786,19 @@ export default function Clientes() {
                           {c.status === 'ativo' && (
                             <button
                               type="button"
-                              onClick={() => {
-                                setForm({
-                                  ...c,
-                                  whatsapp: formatWhatsapp(c.whatsapp || ''),
-                                  portalPin: '',
-                                  removerPinPortal: false,
-                                })
-                                setModal('edit')
+                              onClick={async () => {
+                                try {
+                                  const detail = await api.get<Client>(`/api/clients/${c.id}`)
+                                  setForm({
+                                    ...detail,
+                                    whatsapp: formatWhatsapp(detail.whatsapp || ''),
+                                    portalPin: '',
+                                    removerPinPortal: false,
+                                  })
+                                  setModal('edit')
+                                } catch (e) {
+                                  showError(e instanceof Error ? e.message : 'Erro ao carregar cliente')
+                                }
                               }}
                               title="Editar"
                               className="inline-flex items-center justify-center h-8 px-3 rounded-md border border-primary-500/50 bg-primary-500/10 text-primary-300 hover:bg-primary-500/30 hover:text-white hover:border-primary-400 shadow-sm shadow-primary-900/40 transition-colors"

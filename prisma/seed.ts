@@ -1,12 +1,10 @@
 import 'dotenv/config'
 import { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
+import { encryptField } from '../server/lib/fieldCrypto.js'
 
 const prisma = new PrismaClient()
 
-/** Cliente demo para “Acesso provisório” na área cliente */
-const DEMO_CLIENT_WHATSAPP = '+244 900 000 000'
-const DEMO_CLIENT_PIN = '1234'
 const DEMO_CLIENT_ROVE_ID = 'PLURAL-DEMO'
 
 async function main() {
@@ -27,48 +25,20 @@ async function main() {
     ALTER TABLE "User"
     ADD COLUMN IF NOT EXISTS password_plain TEXT
   `)
+  const plainStored = encryptField(password)
   await prisma.$executeRawUnsafe(
     'UPDATE "User" SET password_plain = $1 WHERE id = $2',
-    password,
+    plainStored,
     user.id
   )
   console.log('Admin criado:', user.email)
 
-  const pinHash = await bcrypt.hash(DEMO_CLIENT_PIN, 10)
-  const hoje = new Date()
-  hoje.setHours(0, 0, 0, 0)
-  const dataFim = new Date(hoje)
-  dataFim.setMonth(dataFim.getMonth() + 1)
-
-  const demo = await prisma.client.upsert({
+  const removed = await prisma.client.deleteMany({
     where: { roveId: DEMO_CLIENT_ROVE_ID },
-    update: {
-      nome: 'Cliente Demo',
-      whatsapp: DEMO_CLIENT_WHATSAPP,
-      portalPinHash: pinHash,
-      portalPinPlain: DEMO_CLIENT_PIN,
-      portalFirstLogin: false,
-      status: 'ativo',
-      dataFim,
-    },
-    create: {
-      roveId: DEMO_CLIENT_ROVE_ID,
-      nome: 'Cliente Demo',
-      whatsapp: DEMO_CLIENT_WHATSAPP,
-      localizacao: 'Luanda',
-      servico: 'iptv',
-      plano: 'mensal',
-      perfil: 'demo.plural',
-      dataInicio: hoje,
-      dataFim,
-      valor: 5000,
-      status: 'ativo',
-      portalPinHash: pinHash,
-      portalPinPlain: DEMO_CLIENT_PIN,
-      portalFirstLogin: false,
-    },
   })
-  console.log('Cliente demo:', demo.whatsapp, `(PIN ${DEMO_CLIENT_PIN})`)
+  if (removed.count > 0) {
+    console.log('Cliente demo removido:', DEMO_CLIENT_ROVE_ID)
+  }
 }
 
 main()

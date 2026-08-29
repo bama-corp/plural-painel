@@ -9,7 +9,7 @@ import { ROVE_PUBLIC_SITE_URL } from '../lib/roveSite'
 import { useClientPortal } from '../contexts/ClientPortalContext'
 import { useAlert } from '../contexts/AlertContext'
 import { clientPortalApi } from '../api/clientPortal'
-import { emptyWhatsapp, formatWhatsapp } from '../utils/whatsapp'
+import { emptyWhatsapp } from '../utils/whatsapp'
 
 const fieldShadow =
   'border-0 shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_1px_2px_rgba(0,0,0,0.4)] focus:shadow-[0_0_0_1.5px_rgba(255,255,255,0.35),0_1px_3px_rgba(0,0,0,0.5)]'
@@ -123,25 +123,6 @@ export default function ClienteLogin() {
             </p>
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-              <button
-                type="button"
-                onClick={() => {
-                  setWhatsapp(formatWhatsapp('244900000000'))
-                  setPin('1234')
-                }}
-                className={`w-full rounded-md bg-[#111] px-3.5 py-3 text-left transition-shadow hover:shadow-[0_0_0_1px_rgba(255,255,255,0.18)] ${fieldShadow}`}
-              >
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-                  Acesso provisório
-                </p>
-                <p className="mt-1 text-sm text-white">
-                  <span className="font-medium">+244 900 000 000</span>
-                  <span className="text-neutral-500"> · </span>
-                  <span className="font-mono text-[13px]">1234</span>
-                </p>
-                <p className="mt-0.5 text-xs text-neutral-600">Clique para preencher</p>
-              </button>
-
               <div className="space-y-1.5">
                 <label htmlFor="cl-whatsapp" className="block text-sm font-semibold text-white">
                   WhatsApp

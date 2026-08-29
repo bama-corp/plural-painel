@@ -5,6 +5,7 @@ import type { AuthPayload } from '../middleware/auth.js'
 import { auditLog } from '../middleware/audit.js'
 import { templates } from '../services/whatsapp.js'
 import { notifyPanelUsers, notifySalaClients, formatDateBr } from '../lib/whatsappNotify.js'
+import { decryptField, encryptField } from '../lib/fieldCrypto.js'
 
 const router = Router()
 
@@ -13,6 +14,15 @@ async function ensureSalaStatusColumn(): Promise<void> {
   await prisma.$executeRawUnsafe(`
     ALTER TABLE salas ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'ativo'
   `)
+}
+
+function stripSalaSenha<T extends { senha?: string | null }>(s: T) {
+  const { senha, ...rest } = s
+  return { ...rest, senhaSet: !!(senha && String(senha).length > 0) }
+}
+
+function withDecryptedSenha<T extends { senha?: string | null }>(s: T) {
+  return { ...s, senha: decryptField(s.senha ?? null) }
 }
 
 /**
@@ -52,7 +62,11 @@ router.get('/', async (req, res) => {
   res.json(
     list.map((s) => {
       const { _count, ...rest } = s
-      return { ...rest, status: statusMap[s.id] ?? 'ativo', totalClientes: _count.clients }
+      return {
+        ...stripSalaSenha(rest),
+        status: statusMap[s.id] ?? 'ativo',
+        totalClientes: _count.clients,
+      }
     })
   )
 })
@@ -67,14 +81,14 @@ router.post('/', auditLog('create_sala', 'sala'), async (req, res) => {
     data: {
       nome: String(nome).trim(),
       email: email != null && String(email).trim() !== '' ? String(email).trim() : null,
-      senha: senha != null && String(senha) !== '' ? String(senha) : null,
+      senha: senha != null && String(senha) !== '' ? encryptField(String(senha)) : null,
       observacoes: observacoes != null ? String(observacoes).trim() || null : null,
       dataFim: dataFim ? new Date(dataFim) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     },
   })
   const withStatus = await prisma.$queryRawUnsafe<Array<{ status: string }>>('SELECT status FROM salas WHERE id = $1', sala.id).then((r) => r[0])
   void notifyPanelUsers('salas', `Nova sala Netflix: "${sala.nome}" — renovação ${formatDateBr(sala.dataFim ?? new Date())}.`)
-  res.status(201).json({ ...sala, status: withStatus?.status ?? 'ativo' })
+  res.status(201).json({ ...withDecryptedSenha(sala), status: withStatus?.status ?? 'ativo' })
 })
 
 // Rotas com path específico antes de /:id para não serem capturadas por outras
@@ -193,18 +207,35 @@ router.post('/:id/pagar-mes', auditLog('pay_sala_month', 'sala'), async (req, re
     `Conta Netflix renovada: sala "${sala.nome}" — ${totalClientes} cliente(s) — próxima renovação ${fimStr}.`
   )
 
-  res.json({ ...sala, status: statusVal, totalClientes })
+  res.json({ ...stripSalaSenha(sala), status: statusVal, totalClientes })
 })
 
 router.get('/:id', async (req, res) => {
   const user = (req as unknown as { user: AuthPayload }).user
   if (!canAccessSalas(user.role)) return res.status(403).json({ error: 'Sem acesso a salas' })
+  const includeSenha = String(req.query.includeSenha) === '1' && canManageSalas(user.role)
   const s = await prisma.sala.findUnique({
     where: { id: Number(req.params.id) },
-    include: { clients: true },
+    include: {
+      clients: {
+        select: {
+          id: true,
+          nome: true,
+          whatsapp: true,
+          status: true,
+          dataFim: true,
+          plano: true,
+          perfil: true,
+        },
+      },
+    },
   })
   if (!s) return res.status(404).json({ error: 'Sala não encontrada' })
-  res.json(s)
+  const { clients, ...sala } = s
+  res.json({
+    ...(includeSenha ? withDecryptedSenha(sala) : stripSalaSenha(sala)),
+    clients,
+  })
 })
 
 router.patch('/:id', auditLog('update_sala', 'sala'), async (req, res) => {
@@ -217,7 +248,9 @@ router.patch('/:id', auditLog('update_sala', 'sala'), async (req, res) => {
   const update: Record<string, unknown> = {}
   if (nome != null) update.nome = String(nome).trim()
   if (email !== undefined) update.email = email != null && String(email).trim() !== '' ? String(email).trim() : null
-  if (senha !== undefined) update.senha = senha != null && String(senha) !== '' ? String(senha) : null
+  if (senha !== undefined) {
+    update.senha = senha != null && String(senha) !== '' ? encryptField(String(senha)) : null
+  }
   if (observacoes !== undefined) update.observacoes = observacoes != null && String(observacoes).trim() !== '' ? String(observacoes).trim() : null
   if (dataFim !== undefined) update.dataFim = dataFim ? new Date(dataFim) : null
   if (Object.keys(update).length > 0) {
@@ -241,7 +274,7 @@ router.patch('/:id', auditLog('update_sala', 'sala'), async (req, res) => {
   } catch {
     // coluna status pode não existir
   }
-  res.json({ ...sala, status: statusVal, totalClientes })
+  res.json({ ...withDecryptedSenha(sala), status: statusVal, totalClientes })
 })
 
 router.delete('/:id', auditLog('delete_sala', 'sala'), async (req, res) => {
