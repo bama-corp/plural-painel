@@ -37,7 +37,7 @@ export interface ClientAssistantContext {
 }
 
 const WA_BUSINESS = process.env.WHATSAPP_PHONE || '244933623143'
-const PUBLIC_SITE = process.env.ROVE_PUBLIC_SITE_URL || 'https://roveplus-bpa.vercel.app/'
+const PUBLIC_SITE = process.env.ROVE_PUBLIC_SITE_URL || 'https://plural-ph.vercel.app/'
 
 function normalize(text: string): string {
   return text
