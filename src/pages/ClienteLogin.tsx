@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Lock, ArrowRight, LifeBuoy, UserCog, Globe, ExternalLink } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Lock, ArrowRight, LifeBuoy, Globe, ExternalLink } from 'lucide-react'
 import { RoveModalOverlay } from '../components/RoveModalOverlay'
-import { LoginThemeSwapButton } from '../components/LoginThemeSwap'
+import { useLoginThemeSwap } from '../components/LoginThemeSwap'
 import { WhatsappAoInput } from '../components/WhatsappAoInput'
 import { ROVE_PUBLIC_SITE_URL } from '../lib/roveSite'
 import { useClientPortal } from '../contexts/ClientPortalContext'
@@ -16,9 +16,8 @@ const fieldShadow =
 const btnShadow =
   'shadow-[0_1px_2px_rgba(0,0,0,0.35),0_4px_16px_rgba(0,0,0,0.35)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.4),0_8px_24px_rgba(0,0,0,0.4)]'
 
-const STAFF_UNLOCK_KEY = 'plural.staffLinkUnlocked'
-const STAFF_TAPS_NEEDED = 5
-const STAFF_TAP_WINDOW_MS = 2500
+const STAFF_TAPS_NEEDED = 8
+const STAFF_TAP_WINDOW_MS = 3500
 
 export default function ClienteLogin() {
   const [whatsapp, setWhatsapp] = useState(() => emptyWhatsapp())
@@ -28,16 +27,13 @@ export default function ClienteLogin() {
   const [recoverWhatsapp, setRecoverWhatsapp] = useState(() => emptyWhatsapp())
   const [recoverMsg, setRecoverMsg] = useState('')
   const [recoverLoading, setRecoverLoading] = useState(false)
-  const [staffUnlocked, setStaffUnlocked] = useState(
-    () => typeof sessionStorage !== 'undefined' && sessionStorage.getItem(STAFF_UNLOCK_KEY) === '1'
-  )
   const logoTaps = useRef<{ count: number; firstAt: number }>({ count: 0, firstAt: 0 })
   const { login } = useClientPortal()
   const { showError } = useAlert()
   const navigate = useNavigate()
+  const { swapTo } = useLoginThemeSwap()
 
   const handleLogoSecretTap = useCallback(() => {
-    if (staffUnlocked) return
     const now = Date.now()
     if (now - logoTaps.current.firstAt > STAFF_TAP_WINDOW_MS) {
       logoTaps.current = { count: 1, firstAt: now }
@@ -45,11 +41,10 @@ export default function ClienteLogin() {
     }
     logoTaps.current.count += 1
     if (logoTaps.current.count >= STAFF_TAPS_NEEDED) {
-      sessionStorage.setItem(STAFF_UNLOCK_KEY, '1')
-      setStaffUnlocked(true)
       logoTaps.current = { count: 0, firstAt: 0 }
+      swapTo('/login', 'light')
     }
-  }, [staffUnlocked])
+  }, [swapTo])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -184,26 +179,6 @@ export default function ClienteLogin() {
                   Recuperar
                 </button>
               </p>
-              <AnimatePresence>
-                {staffUnlocked && (
-                  <motion.p
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="inline-flex flex-wrap items-center justify-center gap-1.5 overflow-hidden"
-                  >
-                    <UserCog className="h-3.5 w-3.5 text-neutral-600" aria-hidden />
-                    É da equipa?{' '}
-                    <LoginThemeSwapButton
-                      to="/login"
-                      theme="light"
-                      className="text-white font-medium underline underline-offset-2 hover:no-underline"
-                    >
-                      Acesso ao painel
-                    </LoginThemeSwapButton>
-                  </motion.p>
-                )}
-              </AnimatePresence>
               <p>
                 <a
                   href={ROVE_PUBLIC_SITE_URL}
