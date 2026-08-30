@@ -33,6 +33,7 @@ import {
 import { api } from '../api/client'
 import { useAlert } from '../contexts/AlertContext'
 import { TablePagination, ROWS_PER_PAGE } from '../components/TablePagination'
+import { PluralTableShell } from '../components/PluralTableShell'
 
 interface DashboardData {
   totalNetflix: number
@@ -264,7 +265,7 @@ export default function Dashboard() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 pb-2">
       <div>
-        <h1 className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-white">
+        <h1 className="plural-page-title flex items-center gap-2.5">
           <LayoutDashboard className="h-6 w-6" />
           Dashboard
         </h1>
@@ -500,7 +501,7 @@ export default function Dashboard() {
                   <YAxis
                     type="category"
                     dataKey="nome"
-                    width={80}
+                    width={56}
                     tick={{ fill: CHART.axis, fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
@@ -530,7 +531,7 @@ export default function Dashboard() {
                   <YAxis
                     type="category"
                     dataKey="nome"
-                    width={80}
+                    width={56}
                     tick={{ fill: CHART.axis, fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
@@ -555,7 +556,7 @@ export default function Dashboard() {
       {(data?.clientsByServidor?.length || data?.clientsBySala?.length) ? (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {data?.clientsByServidor && data.clientsByServidor.length > 0 && (
-            <div className="plural-table-shell">
+            <PluralTableShell>
               <div className="flex items-center justify-between px-5 py-4 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.06)]">
                 <h3 className="text-base font-semibold text-white">Clientes por servidor</h3>
                 <Link
@@ -566,8 +567,7 @@ export default function Dashboard() {
                   <ChevronRight className="h-4 w-4" />
                 </Link>
               </div>
-              <div className="overflow-x-auto">
-                <table className="plural-table">
+              <table className="plural-table plural-table--cards-md">
                   <thead>
                     <tr>
                       <th className="w-12 text-center">Nº</th>
@@ -585,10 +585,10 @@ export default function Dashboard() {
                       const paged = servidorList.slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE)
                       return paged.map((s, idx) => (
                         <tr key={s.id}>
-                          <td className="text-center text-gray-500 text-sm">
+                          <td className="plural-table-cell-num text-center text-gray-500 text-sm" data-label="Nº">
                             {(page - 1) * ROWS_PER_PAGE + idx + 1}
                           </td>
-                          <td>
+                          <td data-label="Servidor">
                             <div className="flex items-center gap-3">
                               <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white text-black">
                                 <Server className="h-3.5 w-3.5" />
@@ -596,8 +596,8 @@ export default function Dashboard() {
                               <span className="font-medium text-white">{s.nome}</span>
                             </div>
                           </td>
-                          <td className="font-medium text-white tabular-nums">{s.totalClientes}</td>
-                          <td>
+                          <td className="font-medium text-white tabular-nums" data-label="Clientes">{s.totalClientes}</td>
+                          <td data-label="Estado">
                             <span
                               className={`plural-badge ${
                                 s.status === 'online'
@@ -610,7 +610,7 @@ export default function Dashboard() {
                               {s.status}
                             </span>
                           </td>
-                          <td>
+                          <td className="plural-table-cell-actions" data-label="Ações">
                             <div className="flex justify-end">
                               {s.status !== 'offline' ? (
                                 <button
@@ -632,7 +632,6 @@ export default function Dashboard() {
                     })()}
                   </tbody>
                 </table>
-              </div>
               {data.clientsByServidor.length > ROWS_PER_PAGE && (
                 <TablePagination
                   totalItems={data.clientsByServidor.length}
@@ -643,11 +642,11 @@ export default function Dashboard() {
                   onPageChange={setServidorTablePage}
                 />
               )}
-            </div>
+            </PluralTableShell>
           )}
 
           {data?.clientsBySala && data.clientsBySala.length > 0 && (
-            <div className="plural-table-shell">
+            <PluralTableShell>
               <div className="flex items-center justify-between px-5 py-4 shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.06)]">
                 <h3 className="text-base font-semibold text-white">Clientes por sala</h3>
                 <Link
@@ -658,8 +657,7 @@ export default function Dashboard() {
                   <ChevronRight className="h-4 w-4" />
                 </Link>
               </div>
-              <div className="overflow-x-auto">
-                <table className="plural-table">
+              <table className="plural-table plural-table--cards-md">
                   <thead>
                     <tr>
                       <th className="w-12 text-center">Nº</th>
@@ -675,10 +673,10 @@ export default function Dashboard() {
                       const paged = salaList.slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE)
                       return paged.map((s, idx) => (
                         <tr key={s.id}>
-                          <td className="text-center text-gray-500 text-sm">
+                          <td className="plural-table-cell-num text-center text-gray-500 text-sm" data-label="Nº">
                             {(page - 1) * ROWS_PER_PAGE + idx + 1}
                           </td>
-                          <td>
+                          <td data-label="Sala">
                             <div className="flex items-center gap-3">
                               <div className="flex h-8 w-8 items-center justify-center rounded-md bg-white/10 text-white">
                                 <LayoutGrid className="h-3.5 w-3.5" />
@@ -686,13 +684,12 @@ export default function Dashboard() {
                               <span className="font-medium text-white">{s.nome}</span>
                             </div>
                           </td>
-                          <td className="font-medium text-white tabular-nums">{s.totalClientes}</td>
+                          <td className="font-medium text-white tabular-nums" data-label="Clientes">{s.totalClientes}</td>
                         </tr>
                       ))
                     })()}
                   </tbody>
                 </table>
-              </div>
               {data.clientsBySala.length > ROWS_PER_PAGE && (
                 <TablePagination
                   totalItems={data.clientsBySala.length}
@@ -703,7 +700,7 @@ export default function Dashboard() {
                   onPageChange={setSalaTablePage}
                 />
               )}
-            </div>
+            </PluralTableShell>
           )}
         </div>
       ) : null}

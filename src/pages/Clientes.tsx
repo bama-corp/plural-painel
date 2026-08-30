@@ -28,6 +28,7 @@ import { api } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
 import { useAlert } from '../contexts/AlertContext'
 import { TablePagination, ROWS_PER_PAGE } from '../components/TablePagination'
+import { PluralTableShell } from '../components/PluralTableShell'
 
 interface Client {
   id: number
@@ -447,7 +448,7 @@ export default function Clientes() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+            <h1 className="plural-page-title flex items-center gap-2">
               <Users className="w-6 h-6" />
               Clientes
             </h1>
@@ -459,20 +460,20 @@ export default function Clientes() {
       </div>
 
       {/* Abas IPTV | NETFLIX + stats + Novo cliente */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="space-y-3">
         {(showIptvTab || showNetflixTab) && (
-          <div className="flex gap-1 p-1 rounded-md bg-netflix-panel/60 border border-netflix-border/80">
+          <div className="flex w-full gap-1 rounded-md border border-netflix-border/80 bg-netflix-panel/60 p-1">
             {showIptvTab && (
               <button
                 type="button"
                 onClick={() => switchTab('iptv')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:flex-none sm:px-4 ${
                   tab === 'iptv'
                     ? 'bg-white text-black shadow-lg shadow-primary-900/30'
-                    : 'text-gray-400 hover:text-white hover:bg-netflix-hover/80'
+                    : 'text-gray-400 hover:bg-netflix-hover/80 hover:text-white'
                 }`}
               >
-                <Tv className="w-4 h-4" />
+                <Tv className="h-4 w-4 shrink-0" />
                 IPTV
               </button>
             )}
@@ -480,45 +481,52 @@ export default function Clientes() {
               <button
                 type="button"
                 onClick={() => switchTab('netflix')}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:flex-none sm:px-4 ${
                   tab === 'netflix'
                     ? 'bg-white text-black shadow-lg shadow-primary-900/30'
-                    : 'text-gray-400 hover:text-white hover:bg-netflix-hover/80'
+                    : 'text-gray-400 hover:bg-netflix-hover/80 hover:text-white'
                 }`}
               >
-                <Film className="w-4 h-4" />
+                <Film className="h-4 w-4 shrink-0" />
                 NETFLIX
               </button>
             )}
           </div>
         )}
-        <div className="flex flex-1 flex-wrap items-center justify-center gap-2">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-netflix-panel/80 border border-netflix-border/60 text-gray-300 text-sm">
-            <span className="font-semibold text-white">{stats.total}</span> total
+
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-netflix-border/60 bg-netflix-panel/80 px-2.5 py-2 text-xs text-gray-300 sm:justify-start sm:px-3 sm:py-1.5 sm:text-sm">
+            <span className="font-semibold text-white">{stats.total}</span>
+            total
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-900/30 border border-green-700/40 text-green-300 text-sm">
-            <span className="font-semibold">{stats.ativos}</span> ativos
+          <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-green-700/40 bg-green-900/30 px-2.5 py-2 text-xs text-green-300 sm:justify-start sm:px-3 sm:py-1.5 sm:text-sm">
+            <span className="font-semibold">{stats.ativos}</span>
+            ativos
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-900/30 border border-amber-700/40 text-amber-300 text-sm">
-            <span className="font-semibold">{stats.vencendo}</span> a vencer (7 dias)
+          <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-amber-700/40 bg-amber-900/30 px-2.5 py-2 text-xs text-amber-300 sm:justify-start sm:px-3 sm:py-1.5 sm:text-sm">
+            <span className="font-semibold">{stats.vencendo}</span>
+            <span className="sm:hidden">a vencer</span>
+            <span className="hidden sm:inline">a vencer (7 dias)</span>
           </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-900/30 border border-red-700/40 text-red-300 text-sm">
-            <span className="font-semibold">{stats.vencidos}</span> vencidos
+          <span className="inline-flex items-center justify-center gap-1.5 rounded-md border border-red-700/40 bg-red-900/30 px-2.5 py-2 text-xs text-red-300 sm:justify-start sm:px-3 sm:py-1.5 sm:text-sm">
+            <span className="font-semibold">{stats.vencidos}</span>
+            vencidos
           </span>
         </div>
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
+
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           {tab === 'netflix' && (
             <button
               type="button"
               onClick={() => setShowNetflixPins((v) => !v)}
-              className={`flex items-center gap-2 py-2.5 px-4 rounded-md text-sm font-medium border transition-colors ${
+              className={`flex w-full items-center justify-center gap-2 rounded-md border py-2.5 px-4 text-sm font-medium transition-colors sm:w-auto ${
                 showNetflixPins
                   ? 'border-primary-500/45 bg-primary-500/15 text-primary-200 hover:bg-primary-500/25'
-                  : 'border-netflix-border/80 bg-netflix-panel text-gray-300 hover:bg-netflix-hover hover:text-white hover:border-netflix-hover'
+                  : 'border-netflix-border/80 bg-netflix-panel text-gray-300 hover:border-netflix-hover hover:bg-netflix-hover hover:text-white'
               }`}
               title={showNetflixPins ? 'Ocultar PIN Netflix na tabela' : 'Mostrar PIN Netflix na tabela'}
             >
-              {showNetflixPins ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showNetflixPins ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showNetflixPins ? 'Ocultar PIN' : 'Mostrar PIN'}
             </button>
           )}
@@ -540,19 +548,19 @@ export default function Clientes() {
               })
               setModal('new')
             }}
-            className="flex items-center gap-2 py-2.5 px-5 rounded-md border border-white bg-white text-black hover:bg-neutral-200 hover:border-neutral-200 text-sm font-medium shadow-md shadow-black/25 transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-md border border-white bg-white py-2.5 px-5 text-sm font-medium text-black shadow-md shadow-black/25 transition-colors hover:border-neutral-200 hover:bg-neutral-200 sm:w-auto"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="h-4 w-4" />
             Novo cliente
           </button>
         </div>
       </div>
 
       {/* Barra de filtros */}
-      <div className="flex flex-wrap items-center gap-2 p-4 rounded-md bg-netflix-card/60 border border-netflix-border/80">
+      <div className="plural-filter-bar">
         {tab === 'iptv' && (
           <>
-            <div className="w-44 min-w-[11rem] sm:w-48">
+            <div className="plural-filter-field sm:w-48">
               <RoveSelect
                 compact
                 value={filter.servidorId}
@@ -570,7 +578,7 @@ export default function Clientes() {
                 ))}
               </RoveSelect>
             </div>
-            <div className="w-44 min-w-[11rem] sm:w-48">
+            <div className="plural-filter-field sm:w-48">
               <RoveSelect
                 compact
                 value={filter.revendedorId}
@@ -589,7 +597,7 @@ export default function Clientes() {
           </>
         )}
         {tab === 'netflix' && (
-          <div className="w-44 min-w-[11rem] sm:w-48">
+          <div className="plural-filter-field sm:w-48">
             <RoveSelect
               compact
               value={filter.salaId ?? ''}
@@ -606,7 +614,7 @@ export default function Clientes() {
             </RoveSelect>
           </div>
         )}
-        <div className="w-40 min-w-[10rem]">
+        <div className="plural-filter-field-sm">
           <RoveSelect
             compact
             value={filter.status}
@@ -620,7 +628,7 @@ export default function Clientes() {
             <option value="cancelado">Cancelado</option>
           </RoveSelect>
         </div>
-        <div className="w-44 min-w-[11rem]">
+        <div className="plural-filter-field">
           <RoveSelect
             compact
             value={filter.vencendo}
@@ -634,7 +642,7 @@ export default function Clientes() {
             <option value="7dias">Vence em 7 dias</option>
           </RoveSelect>
         </div>
-        <div className="relative flex-1 min-w-[180px]">
+        <div className="plural-filter-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
@@ -655,7 +663,7 @@ export default function Clientes() {
       </div>
 
       {/* Tabela */}
-      <div className="plural-table-shell">
+      <PluralTableShell>
         {loading ? (
           <div className="p-12 flex flex-col items-center justify-center gap-3 text-gray-400">
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-600 border-t-transparent" />
@@ -663,8 +671,7 @@ export default function Clientes() {
           </div>
         ) : (
           <>
-          <div className="overflow-x-auto">
-            <table className="plural-table">
+            <table className="plural-table plural-table--cards-md">
               <thead>
                 <tr>
                   <th className="px-4 py-3.5 font-medium w-12 text-center">Nº</th>
@@ -702,21 +709,21 @@ export default function Clientes() {
                         urgent ? 'bg-amber-900/25' : alert ? 'bg-amber-900/15' : expired ? 'bg-red-900/15' : ''
                       }`}
                     >
-                      <td className="px-4 py-3 text-center text-gray-400 text-sm">{rowNum}</td>
-                      <td className="px-4 py-3">
+                      <td className="plural-table-cell-num px-4 py-3 text-center text-gray-400 text-sm" data-label="Nº">{rowNum}</td>
+                      <td className="px-4 py-3" data-label="Cliente">
                         <div className="font-medium text-white">{c.nome}</div>
                         <div className="text-xs text-primary-300 mt-0.5">
                           {c.roveId || 'A gerar ID ROVE...'}
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" data-label="Contacto">
                         <RoveWhatsappLink value={c.whatsapp} />
                       </td>
                       {tab === 'netflix' && (
-                        <td className="px-4 py-3 text-sm text-gray-300">{c.perfil || '—'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-300" data-label="Perfil">{c.perfil || '—'}</td>
                       )}
                       {tab === 'netflix' && (
-                        <td className="px-4 py-3 text-sm text-gray-300 font-mono">
+                        <td className="px-4 py-3 text-sm text-gray-300 font-mono" data-label="PIN">
                           {!c.pin && !(c as Client & { pinSet?: boolean }).pinSet
                             ? '—'
                             : showNetflixPins && c.pin
@@ -724,21 +731,21 @@ export default function Clientes() {
                               : '••••'}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-sm text-gray-400">{c.localizacao || '—'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-400" data-label="Localização">{c.localizacao || '—'}</td>
                       {tab === 'iptv' && (
                         <>
-                          <td className="px-4 py-3 text-sm text-gray-400">{c.servidor?.nome ?? '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-400">{c.revendedor?.nome ?? '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400" data-label="Servidor">{c.servidor?.nome ?? '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-400" data-label="Revendedor">{c.revendedor?.nome ?? '—'}</td>
                         </>
                       )}
                       {tab === 'netflix' && (
-                        <td className="px-4 py-3 text-sm text-gray-400">
+                        <td className="px-4 py-3 text-sm text-gray-400" data-label="Sala">
                           {c.plano === 'Plano Room' ? (c.sala?.nome ?? '—') : '—'}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-sm">{c.plano}</td>
+                      <td className="px-4 py-3 text-sm" data-label="Plano">{c.plano}</td>
                       {tab === 'iptv' && (
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" data-label="Data fim">
                           <span className={`text-sm ${urgent ? 'text-amber-300 font-semibold' : alert ? 'text-amber-400 font-medium' : expired ? 'text-red-400 font-medium' : 'text-gray-300'}`}>
                             {formatDate(c.dataFim)}
                             {c.status === 'ativo' && (
@@ -750,7 +757,7 @@ export default function Clientes() {
                         </td>
                       )}
                       {tab === 'netflix' && (
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" data-label="Data renovação">
                           <span className={`text-sm ${urgent ? 'text-amber-300 font-semibold' : alert ? 'text-amber-400 font-medium' : expired ? 'text-red-400 font-medium' : 'text-gray-300'}`}>
                             {formatDate(c.dataFim)}
                             {c.status === 'ativo' && (
@@ -761,13 +768,13 @@ export default function Clientes() {
                           </span>
                         </td>
                       )}
-                      <td className="px-4 py-3 text-sm font-medium text-white">{Number(c.valor).toFixed(2)} kz</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-sm font-medium text-white" data-label="Valor">{Number(c.valor).toFixed(2)} kz</td>
+                      <td className="px-4 py-3" data-label="Estado">
                         <span className={`plural-badge ${statusColors[c.status] || 'bg-gray-700 text-gray-300'}`}>
                           {c.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 relative">
+                      <td className="plural-table-cell-actions px-4 py-3 relative" data-label="Ações">
                         <div className="flex justify-end gap-1">
                           {c.status === 'ativo' && c.servico === 'netflix' && c.plano === 'Plano Room' && (
                             <button
@@ -854,7 +861,6 @@ export default function Clientes() {
                 })}
               </tbody>
             </table>
-          </div>
           <TablePagination
             totalItems={clients.length}
             currentPage={tablePageClamped}
@@ -867,7 +873,7 @@ export default function Clientes() {
             {tab === 'iptv' ? 'Nenhum cliente IPTV encontrado.' : 'Nenhum cliente Netflix encontrado.'} Ajuste os filtros ou adicione um novo cliente.
           </div>
         )}
-      </div>
+      </PluralTableShell>
 
       {/* Modal confirmar suspender */}
       {clientSuspender && (
@@ -1135,7 +1141,7 @@ export default function Clientes() {
             initial={{ opacity: 0, y: 12, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-            className="w-full max-w-4xl flex flex-col gap-3 max-h-[90vh]"
+            className="w-full max-w-4xl flex max-h-[90dvh] flex-col gap-3 overflow-hidden overflow-y-auto"
           >
             <div className="flex items-end justify-between gap-3 shrink-0 px-0.5">
               <div className="min-w-0">
@@ -1176,7 +1182,7 @@ export default function Clientes() {
                       placeholder="Ex: Maria António"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                     <div>
                       <label className="block font-medium text-gray-300 text-xs mb-1">
                         WhatsApp
@@ -1280,7 +1286,7 @@ export default function Clientes() {
                   </p>
                   <div
                     className={
-                      form.servico === 'netflix' ? 'grid grid-cols-2 gap-2' : 'space-y-3'
+                      form.servico === 'netflix' ? 'grid grid-cols-1 gap-2 sm:grid-cols-2' : 'space-y-3'
                     }
                   >
                     <div>
@@ -1395,7 +1401,7 @@ export default function Clientes() {
                     )}
                   </div>
                   {form.servico === 'iptv' && (
-                    <div className={`grid grid-cols-2 ${compactClientForm ? 'gap-2 mt-2.5' : 'gap-3 mt-4'}`}>
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 ${compactClientForm ? 'gap-2 mt-2.5' : 'gap-3 mt-4'}`}>
                       <div>
                         <label
                           className={`block font-medium text-gray-300 ${compactClientForm ? 'text-xs mb-1' : 'text-sm mb-0.5'}`}
@@ -1445,7 +1451,7 @@ export default function Clientes() {
 
                 <div className="border-t border-netflix-border/60 pt-3 space-y-3">
                     {form.servico === 'netflix' ? (
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <div>
                           <label className="block font-medium text-gray-300 text-xs mb-1">
                             Perfil
@@ -1502,7 +1508,7 @@ export default function Clientes() {
                         : '—'
 
                       return (
-                    <div className={`grid grid-cols-2 ${compactClientForm ? 'gap-2' : 'gap-3'}`}>
+                    <div className={`grid grid-cols-1 sm:grid-cols-2 ${compactClientForm ? 'gap-2' : 'gap-3'}`}>
                       <div>
                         <label
                           className={`block font-medium text-gray-300 ${compactClientForm ? 'text-xs mb-1' : 'text-sm mb-0.5'}`}

@@ -5,6 +5,7 @@ import { useAlert } from '../../contexts/AlertContext'
 import { RoveSelect } from '../../components/RoveSelect'
 import { RoveWhatsappLink } from '../../components/RoveWhatsappLink'
 import { TablePagination, ROWS_PER_PAGE } from '../../components/TablePagination'
+import { PluralTableShell } from '../../components/PluralTableShell'
 import { mesesPagamentoLabel, RoveFormLabel } from '../../components/roveFormUi'
 import { FinanceiroActionBtn } from './FinanceiroActionBtn'
 import { FinanceiroConfirmModal } from './FinanceiroConfirmModal'
@@ -145,7 +146,7 @@ export function FinanceiroCobrancas({
           Renove assinaturas, registe pagamentos ou reative clientes vencidos.
         </p>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="w-48 min-w-[11rem]">
+          <div className="plural-filter-field sm:w-48">
             <RoveSelect
               compact
               value={filtro}
@@ -170,15 +171,14 @@ export function FinanceiroCobrancas({
         </div>
       </div>
 
-      <div className="plural-table-shell">
+      <PluralTableShell>
         {loading ? (
           <div className="p-12 text-center text-gray-400 text-sm">A carregar...</div>
         ) : clients.length === 0 ? (
           <div className="p-12 text-center text-gray-400 text-sm">Nenhum cliente neste filtro.</div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="plural-table">
+            <table className="plural-table plural-table--cards-md">
                 <thead>
                   <tr className="text-gray-400 border-b border-netflix-border">
                     <th className="text-left py-2 px-3">Cliente</th>
@@ -187,7 +187,7 @@ export function FinanceiroCobrancas({
                     <th className="text-right py-2 px-3">Valor</th>
                     <th className="text-left py-2 px-3">Vencimento</th>
                     <th className="text-left py-2 px-3">Estado</th>
-                    <th className="text-right py-2 px-3 min-w-[220px]">Ações</th>
+                    <th className="text-right py-2 px-3 sm:min-w-[220px]">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -196,11 +196,11 @@ export function FinanceiroCobrancas({
                     const busy = actionId === c.id
                     return (
                       <tr key={c.id} className="border-b border-netflix-border/60">
-                        <td className="py-2 px-3 text-white">{c.nome}</td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-3 text-white" data-label="Cliente">{c.nome}</td>
+                        <td className="py-2 px-3" data-label="Contacto">
                           <RoveWhatsappLink value={c.whatsapp} compact />
                         </td>
-                        <td className="py-2 px-3 text-gray-300 capitalize">
+                        <td className="py-2 px-3 text-gray-300 capitalize" data-label="Serviço">
                           {c.servico}
                           {c.servico === 'iptv' && c.servidor?.nome && (
                             <span className="block text-xs text-gray-500">{c.servidor.nome}</span>
@@ -209,10 +209,10 @@ export function FinanceiroCobrancas({
                             <span className="block text-xs text-gray-500">{c.sala.nome}</span>
                           )}
                         </td>
-                        <td className="py-2 px-3 text-right font-medium text-white">
+                        <td className="py-2 px-3 text-right font-medium text-white" data-label="Valor">
                           {Number(c.valor).toFixed(2)} kz
                         </td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-3" data-label="Vencimento">
                           <span
                             className={
                               days < 0 ? 'text-red-400' : days <= 3 ? 'text-amber-300' : 'text-gray-300'
@@ -224,7 +224,7 @@ export function FinanceiroCobrancas({
                             </span>
                           </span>
                         </td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-3" data-label="Estado">
                           <span
                             className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                               c.status === 'ativo'
@@ -235,7 +235,7 @@ export function FinanceiroCobrancas({
                             {c.status}
                           </span>
                         </td>
-                        <td className="py-2 px-3">
+                        <td className="plural-table-cell-actions py-2 px-3" data-label="Ações">
                           <div className="flex justify-end flex-wrap gap-1.5">
                             {c.status === 'ativo' && (
                               <>
@@ -285,12 +285,11 @@ export function FinanceiroCobrancas({
                     )
                   })}
                 </tbody>
-              </table>
-            </div>
+            </table>
             <TablePagination totalItems={clients.length} currentPage={page} onPageChange={setTablePage} />
           </>
         )}
-      </div>
+      </PluralTableShell>
 
       <FinanceiroConfirmModal
         open={!!clientMarcarPago}

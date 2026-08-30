@@ -83,8 +83,8 @@ export function getClientThemeTokens(mode: ClientThemeMode): ClientThemeTokens {
       ? 'shadow-[inset_0_1px_0_0_rgba(0,0,0,0.06)]'
       : 'shadow-[inset_0_1px_0_0_rgba(255,255,255,0.06)]',
     nav: light
-      ? 'fixed left-3 sm:left-4 top-1/2 z-40 -translate-y-1/2 flex flex-col gap-1 rounded-2xl bg-white/95 p-2 backdrop-blur-xl plural-edge shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
-      : 'fixed left-3 sm:left-4 top-1/2 z-40 -translate-y-1/2 flex flex-col gap-1 rounded-2xl bg-[#0a0a0a]/92 p-2 backdrop-blur-xl plural-edge shadow-[0_16px_48px_rgba(0,0,0,0.6)]',
+      ? 'fixed z-40 flex gap-0.5 bg-white/95 backdrop-blur-xl plural-edge max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:translate-y-0 max-sm:flex-row max-sm:justify-around max-sm:rounded-none max-sm:rounded-t-2xl max-sm:border-t max-sm:border-black/10 max-sm:p-1.5 max-sm:pb-[max(0.35rem,env(safe-area-inset-bottom))] max-sm:shadow-[0_-8px_32px_rgba(0,0,0,0.12)] sm:left-4 sm:top-1/2 sm:-translate-y-1/2 sm:flex-col sm:gap-1 sm:rounded-2xl sm:p-2 sm:shadow-[0_16px_48px_rgba(0,0,0,0.12)]'
+      : 'fixed z-40 flex gap-0.5 bg-[#0a0a0a]/92 backdrop-blur-xl plural-edge max-sm:inset-x-0 max-sm:bottom-0 max-sm:top-auto max-sm:translate-y-0 max-sm:flex-row max-sm:justify-around max-sm:rounded-none max-sm:rounded-t-2xl max-sm:border-t max-sm:border-white/10 max-sm:p-1.5 max-sm:pb-[max(0.35rem,env(safe-area-inset-bottom))] max-sm:shadow-[0_-8px_32px_rgba(0,0,0,0.45)] sm:left-4 sm:top-1/2 sm:-translate-y-1/2 sm:flex-col sm:gap-1 sm:rounded-2xl sm:p-2 sm:shadow-[0_16px_48px_rgba(0,0,0,0.6)]',
     navBtn: (active) =>
       light
         ? active

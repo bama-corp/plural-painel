@@ -8,6 +8,7 @@ import { ROVE_FORM_INPUT_SM, RoveFormLabel } from '../components/roveFormUi'
 import { api } from '../api/client'
 import { useAlert } from '../contexts/AlertContext'
 import { TablePagination, ROWS_PER_PAGE } from '../components/TablePagination'
+import { PluralTableShell } from '../components/PluralTableShell'
 
 interface Sala {
   id: number
@@ -168,7 +169,7 @@ export default function Salas() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+          <h2 className="plural-page-title flex items-center gap-2">
             <LayoutGrid className="w-5 h-5" />
             Salas Netflix
           </h2>
@@ -181,15 +182,15 @@ export default function Salas() {
             setShowSenha(false)
             setModal('new')
           }}
-          className="flex items-center gap-2 py-2 px-4 bg-white text-black rounded-md hover:bg-primary-700 text-sm font-medium shadow-lg shadow-primary-900/30"
+          className="flex w-full items-center justify-center gap-2 py-2 px-4 bg-white text-black rounded-md hover:bg-primary-700 text-sm font-medium shadow-lg shadow-primary-900/30 sm:w-auto"
         >
           <Plus className="w-4 h-4" />
           Nova sala
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 p-4 rounded-md bg-netflix-card/60 border border-netflix-border/80">
-        <div className="w-40 min-w-[10rem]">
+      <div className="plural-filter-bar">
+        <div className="plural-filter-field-sm">
           <RoveSelect
             compact
             value={filter.status}
@@ -202,7 +203,7 @@ export default function Salas() {
             <option value="suspenso">Suspenso</option>
           </RoveSelect>
         </div>
-        <div className="w-44 min-w-[11rem]">
+        <div className="plural-filter-field">
           <RoveSelect
             compact
             value={filter.vencendo}
@@ -217,7 +218,7 @@ export default function Salas() {
             <option value="vencidas">Vencidas</option>
           </RoveSelect>
         </div>
-        <div className="relative flex-1 min-w-[180px]">
+        <div className="plural-filter-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
@@ -237,13 +238,12 @@ export default function Salas() {
         </button>
       </div>
 
-      <div className="plural-table-shell">
+      <PluralTableShell>
         {loading ? (
           <div className="p-8 text-center text-gray-400">A carregar...</div>
         ) : (
           <>
-          <div className="overflow-x-auto">
-            <table className="plural-table">
+            <table className="plural-table plural-table--cards-md">
               <thead>
                 <tr>
                   <th className="px-4 py-3 font-medium w-12 text-center">Nº</th>
@@ -270,8 +270,8 @@ export default function Salas() {
                       salaUrgente ? 'bg-amber-900/25' : salaVencendo ? 'bg-amber-900/15' : salaVencida ? 'bg-red-900/15' : ''
                     }`}
                   >
-                    <td className="px-4 py-3 text-center text-gray-400 text-sm">{(tablePageClamped - 1) * ROWS_PER_PAGE + idx + 1}</td>
-                    <td className="px-4 py-3">
+                    <td className="plural-table-cell-num px-4 py-3 text-center text-gray-400 text-sm" data-label="Nº">{(tablePageClamped - 1) * ROWS_PER_PAGE + idx + 1}</td>
+                    <td className="px-4 py-3" data-label="Sala">
                       <div className="flex items-center gap-2">
                         <div className="p-1.5 rounded-md bg-sky-600/20 text-sky-400">
                           <LayoutGrid className="w-4 h-4" />
@@ -279,16 +279,16 @@ export default function Salas() {
                         <span className="font-medium text-white">{s.nome}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400 max-w-[10rem] truncate" title={s.email || undefined}>
+                    <td className="px-4 py-3 text-sm text-gray-400 max-w-[10rem] truncate" title={s.email || undefined} data-label="Email">
                       {s.email || '—'}
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400 font-mono">
+                    <td className="px-4 py-3 text-sm text-gray-400 font-mono" data-label="Senha">
                       {s.senha || (s as Sala & { senhaSet?: boolean }).senhaSet ? '••••••••' : '—'}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center" data-label="Clientes">
                       <span className="font-medium text-white">{s.totalClientes}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Data fim">
                       <span className={`text-sm ${salaUrgente ? 'text-amber-300 font-semibold' : salaVencendo ? 'text-amber-400 font-medium' : salaVencida ? 'text-red-400 font-medium' : 'text-gray-400'}`}>
                         {s.dataFim ? new Date(s.dataFim).toLocaleDateString('pt-BR') : '—'}
                         {days !== null && (s.status || 'ativo') === 'ativo' && (
@@ -298,7 +298,7 @@ export default function Salas() {
                         )}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Estado">
                       <span
                         className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                           (s.status || 'ativo') === 'ativo' ? 'bg-green-900/50 text-green-300' : 'bg-amber-900/50 text-amber-300'
@@ -307,10 +307,10 @@ export default function Salas() {
                         {(s.status || 'ativo') === 'ativo' ? 'Ativo' : 'Suspenso'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400 max-w-[12rem] truncate" title={s.observacoes || undefined}>
+                    <td className="px-4 py-3 text-sm text-gray-400 max-w-[12rem] truncate" title={s.observacoes || undefined} data-label="Observações">
                       {s.observacoes || '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="plural-table-cell-actions px-4 py-3" data-label="Ações">
                       <div className="flex justify-end gap-1">
                         <button
                           type="button"
@@ -381,7 +381,6 @@ export default function Salas() {
                 })}
               </tbody>
             </table>
-          </div>
           <TablePagination totalItems={filteredList.length} currentPage={tablePageClamped} onPageChange={setTablePage} />
           </>
         )}
@@ -392,7 +391,7 @@ export default function Salas() {
               : 'Nenhuma sala corresponde aos filtros.'}
           </div>
         )}
-      </div>
+      </PluralTableShell>
 
       {salaToDelete && (
         <RoveModalOverlay>
@@ -590,7 +589,7 @@ export default function Salas() {
 
       {modal && (
         <RoveModalOverlay>
-          <div className="bg-netflix-card rounded-md shadow-2xl border border-netflix-border max-w-lg w-full">
+          <div className="plural-modal-panel">
             <div className="border-b border-netflix-border/80 shrink-0 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -616,7 +615,7 @@ export default function Salas() {
               </div>
             </div>
 
-            <div className="p-4 space-y-3">
+            <div className="plural-modal-body space-y-3">
               <p className="text-[10px] text-gray-500 pb-0.5">
                 Campos com <span className="text-primary-400">*</span> são obrigatórios.
               </p>
@@ -637,7 +636,7 @@ export default function Salas() {
                 <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500 mb-2.5">
                   Conta & acesso
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <RoveFormLabel>Email</RoveFormLabel>
                     <input

@@ -1,5 +1,6 @@
 import { Server, Tv } from 'lucide-react'
 import { PLANOS_IPTV, PLANOS_NETFLIX } from '../../lib/planos'
+import { PluralTableShell } from '../../components/PluralTableShell'
 
 export function FinanceiroPlanos() {
   return (
@@ -16,22 +17,24 @@ export function FinanceiroPlanos() {
           <Server className="w-5 h-5 text-blue-400" />
           <h4 className="font-semibold text-white">IPTV</h4>
         </div>
-        <table className="plural-table">
-          <thead>
-            <tr className="text-gray-400 border-b border-netflix-border/60">
-              <th className="text-left py-2 px-4">Plano</th>
-              <th className="text-right py-2 px-4">Mensalidade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {PLANOS_IPTV.map((p) => (
-              <tr key={p.id} className="border-b border-netflix-border/40">
-                <td className="py-3 px-4 text-white">{p.label}</td>
-                <td className="py-3 px-4 text-right font-medium text-white">{p.valor.toLocaleString('pt-PT')} kz</td>
+        <PluralTableShell className="rounded-none border-0 shadow-none">
+          <table className="plural-table plural-table--cards-md">
+            <thead>
+              <tr className="text-gray-400 border-b border-netflix-border/60">
+                <th className="text-left py-2 px-4">Plano</th>
+                <th className="text-right py-2 px-4">Mensalidade</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {PLANOS_IPTV.map((p) => (
+                <tr key={p.id} className="border-b border-netflix-border/40">
+                  <td className="py-3 px-4 text-white" data-label="Plano">{p.label}</td>
+                  <td className="py-3 px-4 text-right font-medium text-white" data-label="Mensalidade">{p.valor.toLocaleString('pt-PT')} kz</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </PluralTableShell>
       </div>
 
       <div className="rounded-md border border-primary-600/40 bg-primary-900/20 overflow-hidden">
@@ -39,26 +42,28 @@ export function FinanceiroPlanos() {
           <Tv className="w-5 h-5 text-primary-400" />
           <h4 className="font-semibold text-white">Netflix</h4>
         </div>
-        <table className="plural-table">
-          <thead>
-            <tr className="text-gray-400 border-b border-netflix-border/60">
-              <th className="text-left py-2 px-4">Plano</th>
-              <th className="text-right py-2 px-4">Inscrição</th>
-              <th className="text-right py-2 px-4">Mensalidade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {PLANOS_NETFLIX.map((p) => (
-              <tr key={p.id} className="border-b border-netflix-border/40">
-                <td className="py-3 px-4 text-white">{p.label}</td>
-                <td className="py-3 px-4 text-right text-amber-300">
-                  {p.inscricao.toLocaleString('pt-PT')} kz
-                </td>
-                <td className="py-3 px-4 text-right font-medium text-white">{p.valor.toLocaleString('pt-PT')} kz</td>
+        <PluralTableShell className="rounded-none border-0 shadow-none">
+          <table className="plural-table plural-table--cards-md">
+            <thead>
+              <tr className="text-gray-400 border-b border-netflix-border/60">
+                <th className="text-left py-2 px-4">Plano</th>
+                <th className="text-right py-2 px-4">Inscrição</th>
+                <th className="text-right py-2 px-4">Mensalidade</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {PLANOS_NETFLIX.map((p) => (
+                <tr key={p.id} className="border-b border-netflix-border/40">
+                  <td className="py-3 px-4 text-white" data-label="Plano">{p.label}</td>
+                  <td className="py-3 px-4 text-right text-amber-300" data-label="Inscrição">
+                    {p.inscricao.toLocaleString('pt-PT')} kz
+                  </td>
+                  <td className="py-3 px-4 text-right font-medium text-white" data-label="Mensalidade">{p.valor.toLocaleString('pt-PT')} kz</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </PluralTableShell>
       </div>
     </div>
   )

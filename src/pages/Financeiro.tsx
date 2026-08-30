@@ -25,6 +25,7 @@ import { api } from '../api/client'
 import { useAlert } from '../contexts/AlertContext'
 import { useAuth } from '../contexts/AuthContext'
 import { TablePagination, ROWS_PER_PAGE } from '../components/TablePagination'
+import { PluralTableShell } from '../components/PluralTableShell'
 import { FinanceiroCobrancas } from './financeiro/FinanceiroCobrancas'
 import { FinanceiroCustos } from './financeiro/FinanceiroCustos'
 import { FinanceiroInscricoes } from './financeiro/FinanceiroInscricoes'
@@ -164,41 +165,51 @@ export default function Financeiro() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+        <h1 className="plural-page-title flex items-center gap-2">
           <DollarSign className="w-6 h-6" />
           Financeiro
         </h1>
         <p className="text-sm text-gray-400 mt-1">
           Centro financeiro do painel: receitas, cobranças, custos de infraestrutura, inscrições e preços.
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <div className="inline-flex items-center gap-1 p-1 rounded-md border border-netflix-border/70 bg-netflix-panel/70">
-            {TABS.map((t) => {
+        <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-2 gap-1 rounded-md border border-netflix-border/70 bg-netflix-panel/70 p-1 sm:flex sm:flex-wrap sm:items-center">
+            {TABS.map((t, index) => {
               const Icon = t.icon
+              const isLastOdd = TABS.length % 2 !== 0 && index === TABS.length - 1
               return (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => setTab(t.id)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-semibold transition-colors ${
-                    tab === t.id ? 'bg-white text-black' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-md px-2 py-2.5 text-xs font-semibold transition-colors sm:px-3 sm:py-2 sm:text-sm ${
+                    isLastOdd ? 'col-span-2 sm:col-span-auto' : ''
+                  } ${
+                    tab === t.id ? 'bg-white text-black' : 'text-gray-300 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  <Icon className="w-4 h-4" />
-                  {t.label}
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {t.id === 'visao' ? (
+                    <>
+                      <span className="sm:hidden">Visão</span>
+                      <span className="hidden sm:inline">{t.label}</span>
+                    </>
+                  ) : (
+                    t.label
+                  )}
                 </button>
               )
             })}
           </div>
           {(tab === 'visao' || tab === 'cobrancas' || tab === 'custos') && (
-            <div className="inline-flex items-center gap-1 p-1 rounded-md border border-netflix-border/70 bg-netflix-panel/70">
+            <div className="flex w-full gap-1 rounded-md border border-netflix-border/70 bg-netflix-panel/70 p-1">
               {(['todos', 'iptv', 'netflix'] as const).map((s) => (
                 <button
                   key={s}
                   type="button"
                   onClick={() => setServicoView(s)}
-                  className={`px-3 py-2 rounded-md text-sm font-semibold capitalize transition-colors ${
-                    servicoView === s ? 'bg-white text-black' : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  className={`flex-1 rounded-md px-2 py-2.5 text-xs font-semibold capitalize transition-colors sm:px-3 sm:py-2 sm:text-sm ${
+                    servicoView === s ? 'bg-white text-black' : 'text-gray-300 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   {s === 'todos' ? 'Todos' : s.toUpperCase()}
@@ -418,15 +429,14 @@ export default function Financeiro() {
           </div>
 
           {canShowIptv && receitaPorServidor.length > 0 && (
-            <div className="plural-table-shell">
+            <PluralTableShell>
               <div className="p-6 pb-0">
                 <h3 className="text-base font-semibold text-white mb-4 flex items-center gap-2">
                   <Server className="w-5 h-5 text-blue-400" />
                   Receita por servidor (mês atual)
                 </h3>
               </div>
-              <div className="overflow-x-auto">
-                <table className="plural-table">
+              <table className="plural-table plural-table--cards-md">
                   <thead>
                     <tr className="text-gray-400 border-b border-netflix-border">
                       <th className="text-left py-2 px-3">Servidor</th>
@@ -443,10 +453,10 @@ export default function Financeiro() {
                         .slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE)
                         .map((r) => (
                           <tr key={r.servidorId} className="border-b border-netflix-border/60">
-                            <td className="py-2 px-3 text-white">{r.servidorNome}</td>
-                            <td className="py-2 px-3 text-right text-gray-300">{r.clientes}</td>
-                            <td className="py-2 px-3 text-right font-medium text-white">{r.receita.toFixed(2)}</td>
-                            <td className="py-2 px-3 text-right">
+                            <td className="py-2 px-3 text-white" data-label="Servidor">{r.servidorNome}</td>
+                            <td className="py-2 px-3 text-right text-gray-300" data-label="Clientes">{r.clientes}</td>
+                            <td className="py-2 px-3 text-right font-medium text-white" data-label="Receita (kz)">{r.receita.toFixed(2)}</td>
+                            <td className="plural-table-cell-actions py-2 px-3 text-right" data-label="Ações">
                               <button
                                 type="button"
                                 onClick={() => goCobrancas('7dias', r.servidorId)}
@@ -460,13 +470,12 @@ export default function Financeiro() {
                     })()}
                   </tbody>
                 </table>
-              </div>
               <TablePagination
                 totalItems={receitaPorServidor.length}
                 currentPage={Math.min(servidorTablePage, Math.max(1, Math.ceil(receitaPorServidor.length / ROWS_PER_PAGE)))}
                 onPageChange={setServidorTablePage}
               />
-            </div>
+            </PluralTableShell>
           )}
 
           <div className="rounded-md border border-netflix-border/80 bg-netflix-card/80 p-6">

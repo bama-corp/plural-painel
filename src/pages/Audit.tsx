@@ -121,7 +121,7 @@ export default function Audit() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold text-white flex items-center gap-2">
+          <h2 className="plural-page-title flex items-center gap-2">
             <FileText className="w-6 h-6" />
             Log de alterações
           </h2>
@@ -162,9 +162,9 @@ export default function Audit() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 p-4 rounded-md bg-netflix-card/60 border border-netflix-border/80">
+      <div className="plural-filter-bar">
         <Filter className="w-4 h-4 text-gray-400 shrink-0" />
-        <div className="w-44 min-w-[11rem]">
+        <div className="plural-filter-field">
           <RoveSelect
             compact
             value={filters.entity}
@@ -178,7 +178,7 @@ export default function Audit() {
             ))}
           </RoveSelect>
         </div>
-        <div className="w-52 min-w-[12rem]">
+        <div className="plural-filter-field-lg">
           <RoveSelect
             compact
             value={filters.action}
@@ -192,7 +192,7 @@ export default function Audit() {
             ))}
           </RoveSelect>
         </div>
-        <div className="w-44 min-w-[11rem]">
+        <div className="plural-filter-field">
           <RoveSelect
             compact
             value={filters.userId}
@@ -207,7 +207,7 @@ export default function Audit() {
             ))}
           </RoveSelect>
         </div>
-        <div className="w-40 min-w-[10rem]">
+        <div className="plural-filter-field-sm">
           <RoveDatePicker
             compact
             allowPastDates
@@ -218,7 +218,7 @@ export default function Audit() {
           />
         </div>
         <span className="text-gray-500 text-sm shrink-0">até</span>
-        <div className="w-40 min-w-[10rem]">
+        <div className="plural-filter-field-sm">
           <RoveDatePicker
             compact
             allowPastDates
@@ -228,7 +228,7 @@ export default function Audit() {
             title="Filtrar até"
           />
         </div>
-        <div className="relative flex-1 min-w-[180px]">
+        <div className="plural-filter-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
@@ -262,8 +262,7 @@ export default function Audit() {
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="plural-table">
+              <table className="plural-table plural-table--cards-md">
                 <thead>
                   <tr className="bg-netflix-panel text-gray-400 text-left">
                     <th className="px-4 py-3 font-medium w-12 text-center">Nº</th>
@@ -277,10 +276,10 @@ export default function Audit() {
                 <tbody>
                   {pagedList.map((entry, idx) => (
                     <tr key={entry.id} className="border-t border-netflix-border hover:bg-netflix-hover/80">
-                      <td className="px-4 py-3 text-center text-gray-500">
+                      <td className="plural-table-cell-num px-4 py-3 text-center text-gray-500" data-label="Nº">
                         {(tablePageClamped - 1) * ROWS_PER_PAGE + idx + 1}
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
+                      <td className="px-4 py-3 whitespace-nowrap" data-label="Quando">
                         <span className="text-white text-sm" title={formatRoveDateTime(entry.createdAt)}>
                           {formatRoveWhen(entry.createdAt)}
                         </span>
@@ -288,27 +287,27 @@ export default function Audit() {
                           {formatRoveDateTime(entry.createdAt)}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" data-label="Utilizador">
                         <span className="font-medium text-white">{tratamentoNome(entry.user.nome)}</span>
                         <span className="text-gray-500 text-xs block">{entry.user.email}</span>
                         {entry.user.role && (
                           <span className="text-[10px] text-gray-500 uppercase">{entry.user.role}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" data-label="Ação">
                         <span
                           className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium border ${auditActionTone(entry.action)}`}
                         >
                           {auditActionLabel(entry.action)}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-gray-300">
+                      <td className="px-4 py-3 text-gray-300" data-label="Entidade">
                         <span>{auditEntityLabel(entry.entity)}</span>
                         {entry.entityId != null && (
                           <span className="text-gray-500 text-xs block">#{entry.entityId}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-200 max-w-md min-w-[12rem]">
+                      <td className="px-4 py-3 text-gray-200 max-w-md sm:min-w-[12rem]" data-label="Detalhes">
                         {entry.details ? (
                           <p className="text-sm leading-relaxed whitespace-normal" title={entry.details}>
                             {entry.details}
@@ -321,7 +320,6 @@ export default function Audit() {
                   ))}
                 </tbody>
               </table>
-            </div>
             <TablePagination
               totalItems={list.length}
               currentPage={tablePageClamped}

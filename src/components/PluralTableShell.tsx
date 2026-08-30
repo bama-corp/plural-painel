@@ -8,5 +8,9 @@ export function PluralTableShell({
   children: ReactNode
   className?: string
 }) {
-  return <div className={`plural-table-shell ${className}`.trim()}>{children}</div>
+  return (
+    <div className={`plural-table-shell ${className}`.trim()}>
+      <div className="plural-table-scroll">{children}</div>
+    </div>
+  )
 }

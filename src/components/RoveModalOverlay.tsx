@@ -17,7 +17,7 @@ export function RoveModalOverlay({
 
   return createPortal(
     <div
-      className={`rove-portal fixed inset-0 flex items-center justify-center p-4 ${dimClassName}`}
+      className={`rove-portal fixed inset-0 flex items-end justify-center p-2 sm:items-center sm:p-4 ${dimClassName}`}
       style={{ zIndex }}
     >
       {children}

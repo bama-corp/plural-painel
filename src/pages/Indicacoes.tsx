@@ -15,6 +15,7 @@ import { emptyWhatsapp, formatWhatsapp, isWhatsappValid, nationalDigitsFromWhats
 import { api } from '../api/client'
 import { useAlert } from '../contexts/AlertContext'
 import { TablePagination, ROWS_PER_PAGE } from '../components/TablePagination'
+import { PluralTableShell } from '../components/PluralTableShell'
 
 const emptyForm = () => ({
   id: 0,
@@ -187,7 +188,7 @@ export default function Indicacoes() {
       {/* Header com título, descrição, estatísticas e botão */}
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+          <h1 className="plural-page-title flex items-center gap-2">
             <Gift className="w-6 h-6" />
             Indicações
           </h1>
@@ -222,8 +223,8 @@ export default function Indicacoes() {
       </div>
 
       {/* Barra de filtros */}
-      <div className="flex flex-wrap items-center gap-2 p-4 rounded-md bg-netflix-card/60 border border-netflix-border/80">
-        <div className="w-44 min-w-[11rem]">
+      <div className="plural-filter-bar">
+        <div className="plural-filter-field">
           <RoveSelect
             compact
             value={filter.status}
@@ -236,7 +237,7 @@ export default function Indicacoes() {
             <option value="confirmada">Confirmadas</option>
           </RoveSelect>
         </div>
-        <div className="relative flex-1 min-w-[180px]">
+        <div className="plural-filter-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
@@ -257,7 +258,7 @@ export default function Indicacoes() {
       </div>
 
       {/* Tabela */}
-      <div className="plural-table-shell">
+      <PluralTableShell>
         {loading ? (
           <div className="p-12 flex flex-col items-center justify-center gap-3 text-gray-400">
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-600 border-t-transparent" />
@@ -265,8 +266,7 @@ export default function Indicacoes() {
           </div>
         ) : (
           <>
-          <div className="overflow-x-auto">
-            <table className="plural-table">
+            <table className="plural-table plural-table--cards-md">
               <thead>
                 <tr>
                   <th className="px-4 py-3.5 font-medium w-12 text-center">Nº</th>
@@ -281,22 +281,22 @@ export default function Indicacoes() {
               <tbody className="divide-y divide-netflix-border/80 text-gray-200">
                 {pagedIndicacoes.map((i, idx) => (
                   <tr key={i.id} className="hover:bg-netflix-hover/80 transition-colors">
-                    <td className="px-4 py-3 text-center text-gray-400 text-sm">{(tablePageClamped - 1) * ROWS_PER_PAGE + idx + 1}</td>
-                    <td className="px-4 py-3">
+                    <td className="plural-table-cell-num px-4 py-3 text-center text-gray-400 text-sm" data-label="Nº">{(tablePageClamped - 1) * ROWS_PER_PAGE + idx + 1}</td>
+                    <td className="px-4 py-3" data-label="Indicado">
                       <span className="font-medium text-white">{i.indicadoNome}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="WhatsApp indicado">
                       <RoveWhatsappLink value={i.indicadoWhatsapp} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Quem indicou">
                       <span className="text-gray-200 text-sm">{i.indicador.nome}</span>
                       <span className="text-primary-300 text-xs block">{i.indicador.roveId || 'Sem ID ROVE'}</span>
                       <RoveWhatsappLink value={i.indicador.whatsapp} compact hideWhenEmpty className="mt-0.5" />
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">
+                    <td className="px-4 py-3 text-sm text-gray-400" data-label="Data">
                       {new Date(i.createdAt).toLocaleDateString('pt-BR')}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Estado">
                       <span
                         className={`plural-badge ${
                           i.status === 'confirmada'
@@ -307,7 +307,7 @@ export default function Indicacoes() {
                         {i.status}
                       </span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="plural-table-cell-actions px-4 py-3" data-label="Ações">
                       <div className="flex justify-end gap-1">
                         {i.status === 'pendente' && (
                           <button
@@ -362,7 +362,6 @@ export default function Indicacoes() {
                 ))}
               </tbody>
             </table>
-          </div>
           <TablePagination totalItems={filtered.length} currentPage={tablePageClamped} onPageChange={setTablePage} />
           </>
         )}
@@ -372,7 +371,7 @@ export default function Indicacoes() {
             Nenhuma indicação encontrada.
           </div>
         )}
-      </div>
+      </PluralTableShell>
 
       {/* Modal confirmar aprovar indicação */}
       {indicacaoToConfirmar && (
@@ -512,7 +511,7 @@ export default function Indicacoes() {
       {/* Modal nova / editar indicação */}
       {modal && (
         <RoveModalOverlay>
-          <div className="bg-netflix-card rounded-md shadow-2xl border border-netflix-border max-w-lg w-full">
+          <div className="plural-modal-panel">
             <div className="border-b border-netflix-border/80 shrink-0 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -543,7 +542,7 @@ export default function Indicacoes() {
               </div>
             </div>
 
-            <div className="p-4 space-y-3">
+            <div className="plural-modal-body space-y-3">
               <p className="text-[10px] text-gray-500 pb-0.5">
                 Campos com <span className="text-primary-400">*</span> são obrigatórios.
               </p>

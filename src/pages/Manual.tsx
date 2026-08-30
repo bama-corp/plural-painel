@@ -445,7 +445,7 @@ export default function Manual() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+        <h2 className="plural-page-title flex items-center gap-2">
           <BookOpen className="w-5 h-5" />
           Manual do Utilizador
         </h2>
@@ -502,11 +502,11 @@ export default function Manual() {
                     transition={{ duration: 0.2 }}
                     className="border-t border-netflix-border/60"
                   >
-                    <div className="p-5 pt-4 space-y-6 bg-black/20">
+                    <div className="p-4 pt-3 space-y-6 bg-black/20 sm:p-5 sm:pt-4">
                       {s.detalhes.map((d) => (
                         <div key={d.titulo}>
                           <h4 className="text-sm font-semibold text-primary-300 mb-2">{d.titulo}</h4>
-                          <ol className="list-decimal list-inside space-y-1.5 text-sm text-gray-300">
+                          <ol className="list-decimal space-y-1.5 ps-4 text-sm text-gray-300 sm:list-inside sm:ps-0">
                             {d.passos.map((p, i) => (
                               <li key={i} className="leading-relaxed">
                                 {p}

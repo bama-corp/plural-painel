@@ -86,10 +86,10 @@ export default function ClienteLogin() {
       <button
         type="button"
         onClick={handleLogoSecretTap}
-        className="absolute -top-1 left-5 sm:-top-2 sm:left-8 z-20 cursor-default select-none"
+        className="absolute left-4 top-3 z-20 cursor-default select-none sm:-top-2 sm:left-8"
         aria-label="plural"
       >
-        <span className="plural-wordmark-mask block h-36 sm:h-44 w-[14rem] sm:w-[18rem] bg-white" />
+        <span className="plural-wordmark-mask block h-16 w-[9.5rem] bg-white sm:h-44 sm:w-[18rem]" />
       </button>
 
       <div

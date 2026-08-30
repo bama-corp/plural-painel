@@ -155,7 +155,7 @@ export default function MeuPerfil() {
             <Sparkles className="w-6 h-6" aria-hidden />
           </div>
           <div className="min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Meu perfil</h1>
+            <h1 className="plural-page-title tracking-tight">Meu perfil</h1>
             <p className="text-gray-400 text-sm mt-1 max-w-xl">
               Atualize os seus dados de contacto. A palavra-passe só é alterada se preencher os três campos de
               segurança.

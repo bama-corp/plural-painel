@@ -7,6 +7,7 @@ import { useAlert } from '../../contexts/AlertContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { RoveSelect } from '../../components/RoveSelect'
 import { TablePagination, ROWS_PER_PAGE } from '../../components/TablePagination'
+import { PluralTableShell } from '../../components/PluralTableShell'
 import { mesesPagamentoLabel, RoveFormLabel } from '../../components/roveFormUi'
 import type { SalaFinanceira, ServicoView, ServidorFinanceiro } from './types'
 
@@ -119,7 +120,7 @@ export function FinanceiroCustos({
   return (
     <div className="space-y-6">
       {canShowIptv && principais.length > 0 && (
-        <div className="plural-table-shell">
+        <PluralTableShell>
           <div className="p-6 pb-0">
             <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
               <Server className="w-5 h-5 text-blue-400" />
@@ -127,8 +128,7 @@ export function FinanceiroCustos({
             </h3>
             <p className="text-sm text-gray-400 mb-4">Mensalidades e datas de pagamento aos fornecedores.</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="plural-table">
+          <table className="plural-table plural-table--cards-md">
               <thead>
                 <tr className="text-gray-400 border-b border-netflix-border">
                   <th className="text-left py-2 px-3">Servidor</th>
@@ -145,13 +145,13 @@ export function FinanceiroCustos({
                   const page = Math.min(servidorGestaoPage, totalPages)
                   return principais.slice((page - 1) * ROWS_PER_PAGE, page * ROWS_PER_PAGE).map((s) => (
                     <tr key={s.id} className="border-b border-netflix-border/60">
-                      <td className="py-2 px-3 text-white">{s.nome}</td>
-                      <td className="py-2 px-3 text-right text-gray-300">{s.totalClientes}</td>
-                      <td className="py-2 px-3 text-right text-gray-300">{Number(s.mensalidade ?? 0).toFixed(2)} kz</td>
-                      <td className="py-2 px-3 text-gray-300">
+                      <td className="py-2 px-3 text-white" data-label="Servidor">{s.nome}</td>
+                      <td className="py-2 px-3 text-right text-gray-300" data-label="Clientes">{s.totalClientes}</td>
+                      <td className="py-2 px-3 text-right text-gray-300" data-label="Mensalidade">{Number(s.mensalidade ?? 0).toFixed(2)} kz</td>
+                      <td className="py-2 px-3 text-gray-300" data-label="Data pagamento">
                         {s.dataPagamento ? new Date(s.dataPagamento).toLocaleDateString('pt-BR') : '—'}
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="py-2 px-3" data-label="Estado">
                         <span
                           className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                             s.status === 'online'
@@ -164,7 +164,7 @@ export function FinanceiroCustos({
                           {s.status}
                         </span>
                       </td>
-                      <td className="py-2 px-3">
+                      <td className="plural-table-cell-actions py-2 px-3" data-label="Ações">
                         <div className="flex justify-end flex-wrap gap-1.5">
                           <FinanceiroActionBtn
                             icon={Zap}
@@ -196,17 +196,16 @@ export function FinanceiroCustos({
                 })()}
               </tbody>
             </table>
-          </div>
           <TablePagination
             totalItems={principais.length}
             currentPage={Math.min(servidorGestaoPage, Math.max(1, Math.ceil(principais.length / ROWS_PER_PAGE)))}
             onPageChange={setServidorGestaoPage}
           />
-        </div>
+        </PluralTableShell>
       )}
 
       {canShowNetflix && (
-        <div className="plural-table-shell">
+        <PluralTableShell>
           <div className="p-6 pb-0">
             <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2">
               <LayoutGrid className="w-5 h-5 text-primary-400" />
@@ -214,8 +213,7 @@ export function FinanceiroCustos({
             </h3>
             <p className="text-sm text-gray-400 mb-4">Renove as contas Netflix por sala (+1 mês).</p>
           </div>
-          <div className="overflow-x-auto">
-            <table className="plural-table">
+          <table className="plural-table plural-table--cards-md">
               <thead>
                 <tr className="text-gray-400 border-b border-netflix-border">
                   <th className="text-left py-2 px-3">Sala</th>
@@ -235,14 +233,14 @@ export function FinanceiroCustos({
                     const exp = days !== null && days < 0
                     return (
                       <tr key={s.id} className="border-b border-netflix-border/60">
-                        <td className="py-2 px-3 text-white">{s.nome}</td>
-                        <td className="py-2 px-3 text-right text-gray-300">{s.totalClientes}</td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-3 text-white" data-label="Sala">{s.nome}</td>
+                        <td className="py-2 px-3 text-right text-gray-300" data-label="Clientes">{s.totalClientes}</td>
+                        <td className="py-2 px-3" data-label="Data renovação">
                           <span className={exp ? 'text-red-400' : urgent ? 'text-amber-300' : 'text-gray-300'}>
                             {s.dataFim ? new Date(s.dataFim).toLocaleDateString('pt-BR') : '—'}
                           </span>
                         </td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-3" data-label="Estado">
                           <span
                             className={`inline-flex px-2 py-0.5 rounded text-xs ${
                               s.status === 'ativo' ? 'bg-green-900/50 text-green-300' : 'bg-amber-900/50 text-amber-300'
@@ -251,7 +249,7 @@ export function FinanceiroCustos({
                             {s.status === 'ativo' ? 'Ativo' : 'Suspenso'}
                           </span>
                         </td>
-                        <td className="py-2 px-3 text-right">
+                        <td className="plural-table-cell-actions py-2 px-3 text-right" data-label="Ações">
                           <FinanceiroActionBtn
                             icon={RefreshCw}
                             label="+1 mês"
@@ -265,13 +263,12 @@ export function FinanceiroCustos({
                 })()}
               </tbody>
             </table>
-          </div>
           <TablePagination
             totalItems={salas.length}
             currentPage={Math.min(salaTablePage, Math.max(1, Math.ceil(salas.length / ROWS_PER_PAGE)))}
             onPageChange={setSalaTablePage}
           />
-        </div>
+        </PluralTableShell>
       )}
 
       <FinanceiroConfirmModal

@@ -461,7 +461,7 @@ function ClientAreaInner() {
               onClick={() => setTab(id)}
               aria-current={active ? 'page' : undefined}
               title={label}
-              className={`relative flex w-[3.25rem] sm:w-[4.5rem] flex-col items-center justify-center gap-1 rounded-xl px-1 py-3.5 text-[10px] sm:text-[11px] font-medium leading-tight transition-all ${t.navBtn(active)}`}
+              className={`relative flex max-sm:flex-1 max-sm:min-w-0 max-sm:px-0.5 max-sm:py-2 sm:w-[4.5rem] flex-col items-center justify-center gap-0.5 sm:gap-1 rounded-xl px-1 py-3.5 text-[9px] sm:text-[11px] font-medium leading-tight transition-all ${t.navBtn(active)}`}
             >
               <Icon className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
               <span className="max-w-full truncate px-0.5">{label}</span>
@@ -478,20 +478,25 @@ function ClientAreaInner() {
       </nav>
 
       <div
-        className={`relative z-10 flex h-full min-h-0 transition-[padding] duration-300 pl-[4.5rem] sm:pl-[5.5rem] ${
+        className={`relative z-10 flex h-full min-h-0 transition-[padding] duration-300 max-sm:pb-[calc(4.25rem+env(safe-area-inset-bottom,0px))] max-sm:pl-0 sm:pl-[5.5rem] ${
           assistantOpen ? 'lg:pr-[23.5rem]' : 'pr-0'
         }`}
       >
-        <div className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col px-5 sm:px-6">
-          <header className="shrink-0 pt-3 pb-3">
-            <div className={`flex items-center justify-between gap-4 px-4 py-3 sm:px-5 ${t.shell}`}>
+        <div className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-col px-3 sm:px-6">
+          <header className="shrink-0 pt-2 pb-2 sm:pt-3 sm:pb-3">
+            <div className={`flex items-center justify-between gap-2 px-3 py-2.5 sm:gap-4 sm:px-5 sm:py-3 ${t.shell}`}>
               <Link
                 to="/cliente"
                 onClick={() => setTab('inicio')}
-                className="min-w-0 shrink"
+                className="min-w-0 shrink flex-1"
                 aria-label="plural — início"
               >
-                <span className={`plural-wordmark-mask block h-20 w-[22rem] sm:h-24 sm:w-[26rem] ${t.wordmark}`} />
+                <img
+                  src="/logo/plural-mark.png"
+                  alt="plural"
+                  className="h-8 w-8 object-contain sm:hidden"
+                />
+                <span className={`plural-wordmark-mask hidden h-20 w-full max-w-[13rem] sm:block sm:h-24 sm:max-w-[26rem] ${t.wordmark}`} />
               </Link>
 
               <div className="flex items-center gap-2 sm:gap-3 min-w-0">

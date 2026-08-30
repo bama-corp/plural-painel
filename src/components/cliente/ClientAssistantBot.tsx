@@ -255,7 +255,7 @@ export function ClientAssistantBot({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 24 }}
             transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className={`fixed z-40 flex flex-col overflow-hidden rounded-2xl backdrop-blur-xl plural-edge shadow-[0_16px_48px_rgba(0,0,0,0.14)] top-[5.5rem] bottom-5 right-3 w-[min(calc(100vw-5.5rem),22rem)] sm:right-5 sm:w-[22rem] lg:top-4 lg:bottom-4 lg:right-5 ${
+            className={`fixed z-40 flex flex-col overflow-hidden rounded-2xl backdrop-blur-xl plural-edge shadow-[0_16px_48px_rgba(0,0,0,0.14)] max-sm:inset-x-2 max-sm:top-[3.75rem] max-sm:bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] max-sm:w-auto max-sm:right-2 sm:top-[5.5rem] sm:bottom-5 sm:right-3 sm:w-[min(calc(100vw-5.5rem),22rem)] lg:top-4 lg:bottom-4 lg:right-5 lg:w-[22rem] ${
               light ? 'bg-white/95' : 'bg-[#0a0a0a]/95'
             }`}
             data-client-theme={theme}
@@ -427,7 +427,7 @@ export function ClientAssistantBot({
       </AnimatePresence>
 
       {!open && (
-        <div className="fixed bottom-5 right-4 sm:right-6 z-50">
+        <div className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] right-3 z-50 sm:bottom-5 sm:right-6">
           <motion.button
             type="button"
             onClick={() => setOpen(true)}

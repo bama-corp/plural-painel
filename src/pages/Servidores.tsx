@@ -171,7 +171,7 @@ export default function Servidores() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+          <h2 className="plural-page-title flex items-center gap-2">
             <Server className="w-5 h-5" />
             Servidores IPTV
           </h2>
@@ -185,15 +185,15 @@ export default function Servidores() {
             setForm({ nome: '', tipo: 'principal', status: 'online', servidorId: null, mensalidade: null, dataPagamento: null })
             setModal('new')
           }}
-          className="flex items-center gap-2 py-2 px-4 bg-white text-black rounded-md hover:bg-primary-700 text-sm font-medium"
+          className="flex w-full items-center justify-center gap-2 py-2 px-4 bg-white text-black rounded-md hover:bg-primary-700 text-sm font-medium sm:w-auto"
         >
           <Plus className="w-4 h-4" />
           Novo servidor
         </button>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 p-4 rounded-md bg-netflix-card/60 border border-netflix-border/80">
-        <div className="w-40 min-w-[10rem]">
+      <div className="plural-filter-bar">
+        <div className="plural-filter-field-sm">
           <RoveSelect
             compact
             value={filter.tipo}
@@ -206,7 +206,7 @@ export default function Servidores() {
             <option value="secundario">Secundário</option>
           </RoveSelect>
         </div>
-        <div className="w-40 min-w-[10rem]">
+        <div className="plural-filter-field-sm">
           <RoveSelect
             compact
             value={filter.status}
@@ -220,7 +220,7 @@ export default function Servidores() {
             <option value="offline">Offline</option>
           </RoveSelect>
         </div>
-        <div className="relative flex-1 min-w-[180px]">
+        <div className="plural-filter-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
@@ -249,7 +249,7 @@ export default function Servidores() {
           filteredList.map((s) => (
             <div
               key={s.id}
-              className={`rounded-md shadow p-5 flex items-start justify-between ${
+              className={`rounded-md shadow p-4 sm:p-5 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between ${
                 s.status === 'offline'
                   ? 'bg-red-900/20 border-2 border-red-500/50'
                   : s.status === 'instável'
@@ -293,7 +293,7 @@ export default function Servidores() {
                   </span>
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1 self-stretch sm:self-auto sm:shrink-0">
                 {s.tipo === 'principal' && (
                   <button
                     type="button"
@@ -497,7 +497,7 @@ export default function Servidores() {
 
       {modal && (
         <RoveModalOverlay>
-          <div className="bg-netflix-card rounded-md shadow-2xl border border-netflix-border max-w-lg w-full">
+          <div className="plural-modal-panel">
             <div className="border-b border-netflix-border/80 shrink-0 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -522,7 +522,7 @@ export default function Servidores() {
               </div>
             </div>
 
-            <div className="p-4 space-y-3">
+            <div className="plural-modal-body space-y-3">
               <p className="text-[10px] text-gray-500 pb-0.5">
                 Campos com <span className="text-primary-400">*</span> são obrigatórios.
               </p>
@@ -543,7 +543,7 @@ export default function Servidores() {
                 <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500 mb-2.5">
                   Tipo & ligação
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <RoveFormLabel required>Tipo</RoveFormLabel>
                     <RoveSelect
@@ -596,7 +596,7 @@ export default function Servidores() {
 
               <div className="border-t border-netflix-border/60 pt-3">
                 <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500 mb-2.5">Pagamento</p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div>
                     <RoveFormLabel>Mensalidade (kz)</RoveFormLabel>
                     {form.tipo === 'principal' ? (

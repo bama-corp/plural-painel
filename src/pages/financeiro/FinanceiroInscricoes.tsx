@@ -6,6 +6,7 @@ import { api } from '../../api/client'
 import { useAlert } from '../../contexts/AlertContext'
 import { RoveWhatsappLink } from '../../components/RoveWhatsappLink'
 import { TablePagination, ROWS_PER_PAGE } from '../../components/TablePagination'
+import { PluralTableShell } from '../../components/PluralTableShell'
 import { inscricaoValorPlano } from '../../lib/planos'
 import type { ClienteFinanceiro } from './types'
 
@@ -74,15 +75,14 @@ export function FinanceiroInscricoes({ onChanged }: { onChanged?: () => void }) 
         </p>
       </div>
 
-      <div className="plural-table-shell">
+      <PluralTableShell>
         {loading ? (
           <div className="p-12 text-center text-gray-400 text-sm">A carregar...</div>
         ) : clients.length === 0 ? (
           <div className="p-12 text-center text-gray-400 text-sm">Nenhuma inscrição pendente.</div>
         ) : (
           <>
-            <div className="overflow-x-auto">
-              <table className="plural-table">
+            <table className="plural-table plural-table--cards-md">
                 <thead>
                   <tr className="text-gray-400 border-b border-netflix-border">
                     <th className="text-left py-2 px-3">Cliente</th>
@@ -98,16 +98,16 @@ export function FinanceiroInscricoes({ onChanged }: { onChanged?: () => void }) 
                     const insc = inscricaoValorPlano(c.plano)
                     return (
                       <tr key={c.id} className="border-b border-netflix-border/60">
-                        <td className="py-2 px-3 text-white">{c.nome}</td>
-                        <td className="py-2 px-3">
+                        <td className="py-2 px-3 text-white" data-label="Cliente">{c.nome}</td>
+                        <td className="py-2 px-3" data-label="Contacto">
                           <RoveWhatsappLink value={c.whatsapp} compact />
                         </td>
-                        <td className="py-2 px-3 text-gray-300">{c.plano}</td>
-                        <td className="py-2 px-3 text-right font-medium text-amber-300">
+                        <td className="py-2 px-3 text-gray-300" data-label="Plano">{c.plano}</td>
+                        <td className="py-2 px-3 text-right font-medium text-amber-300" data-label="Inscrição">
                           {insc != null ? `${insc.toLocaleString('pt-PT')} kz` : '—'}
                         </td>
-                        <td className="py-2 px-3 text-right text-gray-300">{Number(c.valor).toFixed(2)} kz</td>
-                        <td className="py-2 px-3 text-right">
+                        <td className="py-2 px-3 text-right text-gray-300" data-label="Mensal">{Number(c.valor).toFixed(2)} kz</td>
+                        <td className="plural-table-cell-actions py-2 px-3 text-right" data-label="Ação">
                           <FinanceiroActionBtn
                             icon={CheckCircle}
                             label="Marcar paga"
@@ -120,12 +120,11 @@ export function FinanceiroInscricoes({ onChanged }: { onChanged?: () => void }) 
                     )
                   })}
                 </tbody>
-              </table>
-            </div>
+            </table>
             <TablePagination totalItems={clients.length} currentPage={page} onPageChange={setTablePage} />
           </>
         )}
-      </div>
+      </PluralTableShell>
 
       <FinanceiroConfirmModal
         open={!!clientInscricao}

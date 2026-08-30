@@ -10,6 +10,7 @@ import { emptyWhatsapp, formatWhatsapp, isWhatsappValid } from '../utils/whatsap
 import { api } from '../api/client'
 import { useAlert } from '../contexts/AlertContext'
 import { TablePagination, ROWS_PER_PAGE } from '../components/TablePagination'
+import { PluralTableShell } from '../components/PluralTableShell'
 
 interface Servidor {
   id: number
@@ -173,7 +174,7 @@ export default function Revendedores() {
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
       <div className="flex flex-col gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+          <h2 className="plural-page-title flex items-center gap-2">
             <Store className="w-5 h-5" />
             Revendedores IPTV
           </h2>
@@ -197,7 +198,7 @@ export default function Revendedores() {
               setForm({ nome: '', contacto: emptyWhatsapp(), servidorId: null, observacoes: '' })
               setModal('new')
             }}
-            className="flex items-center gap-2 py-2 px-4 bg-white text-black rounded-md hover:bg-primary-700 text-sm font-medium shadow-lg shadow-primary-900/30 shrink-0"
+            className="flex w-full items-center justify-center gap-2 py-2 px-4 bg-white text-black rounded-md hover:bg-primary-700 text-sm font-medium shadow-lg shadow-primary-900/30 sm:w-auto sm:shrink-0"
           >
             <Plus className="w-4 h-4" />
             Novo revendedor
@@ -205,8 +206,8 @@ export default function Revendedores() {
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 p-4 rounded-md bg-netflix-card/60 border border-netflix-border/80">
-        <div className="w-44 min-w-[11rem] sm:w-48">
+      <div className="plural-filter-bar">
+        <div className="plural-filter-field sm:w-48">
           <RoveSelect
             compact
             value={filter.servidorId}
@@ -222,7 +223,7 @@ export default function Revendedores() {
             ))}
           </RoveSelect>
         </div>
-        <div className="w-40 min-w-[10rem]">
+        <div className="plural-filter-field-sm">
           <RoveSelect
             compact
             value={filter.status}
@@ -235,7 +236,7 @@ export default function Revendedores() {
             <option value="suspenso">Suspenso</option>
           </RoveSelect>
         </div>
-        <div className="relative flex-1 min-w-[180px]">
+        <div className="plural-filter-search">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
@@ -255,13 +256,12 @@ export default function Revendedores() {
         </button>
       </div>
 
-      <div className="plural-table-shell">
+      <PluralTableShell>
         {loading ? (
           <div className="p-8 text-center text-gray-400">A carregar...</div>
         ) : (
           <>
-          <div className="overflow-x-auto">
-            <table className="plural-table">
+            <table className="plural-table plural-table--cards-md">
               <thead>
                 <tr>
                   <th className="px-4 py-3 font-medium w-12 text-center">Nº</th>
@@ -277,8 +277,8 @@ export default function Revendedores() {
               <tbody className="divide-y divide-netflix-border/80 text-gray-200">
                 {pagedList.map((r, idx) => (
                   <tr key={r.id} className="hover:bg-netflix-hover/80 transition-colors">
-                    <td className="px-4 py-3 text-center text-gray-400 text-sm">{(tablePageClamped - 1) * ROWS_PER_PAGE + idx + 1}</td>
-                    <td className="px-4 py-3">
+                    <td className="plural-table-cell-num px-4 py-3 text-center text-gray-400 text-sm" data-label="Nº">{(tablePageClamped - 1) * ROWS_PER_PAGE + idx + 1}</td>
+                    <td className="px-4 py-3" data-label="Revendedor">
                       <div className="flex items-center gap-2">
                         <div className="p-1.5 rounded-md bg-primary-600/20 text-primary-400">
                           <Store className="w-4 h-4" />
@@ -286,16 +286,16 @@ export default function Revendedores() {
                         <span className="font-medium text-white">{r.nome}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Contacto">
                       <RoveWhatsappLink value={r.contacto} />
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400">
+                    <td className="px-4 py-3 text-sm text-gray-400" data-label="Servidor">
                       {r.servidor ? r.servidor.nome : '—'}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 text-center" data-label="Clientes">
                       <span className="font-medium text-white">{r.totalClientes}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3" data-label="Estado">
                       <span
                         className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                           (r.status || 'ativo') === 'ativo' ? 'bg-green-900/50 text-green-300' : 'bg-amber-900/50 text-amber-300'
@@ -304,10 +304,10 @@ export default function Revendedores() {
                         {(r.status || 'ativo') === 'ativo' ? 'Ativo' : 'Suspenso'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-400 max-w-[12rem] truncate" title={r.observacoes || undefined}>
+                    <td className="px-4 py-3 text-sm text-gray-400 max-w-[12rem] truncate" title={r.observacoes || undefined} data-label="Observações">
                       {r.observacoes || '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="plural-table-cell-actions px-4 py-3" data-label="Ações">
                       <div className="flex justify-end gap-1">
                         {(r.status || 'ativo') === 'ativo' ? (
                           <button
@@ -360,7 +360,6 @@ export default function Revendedores() {
                 ))}
               </tbody>
             </table>
-          </div>
           <TablePagination totalItems={filteredList.length} currentPage={tablePageClamped} onPageChange={setTablePage} />
           </>
         )}
@@ -369,7 +368,7 @@ export default function Revendedores() {
             {list.length === 0 ? 'Nenhum revendedor. Adicione o primeiro.' : 'Nenhum revendedor corresponde aos filtros.'}
           </div>
         )}
-      </div>
+      </PluralTableShell>
 
       {/* Modal confirmar suspender */}
       {revendedorSuspender && (
@@ -506,7 +505,7 @@ export default function Revendedores() {
 
       {modal && (
         <RoveModalOverlay>
-          <div className="bg-netflix-card rounded-md shadow-2xl border border-netflix-border max-w-lg w-full">
+          <div className="plural-modal-panel">
             <div className="border-b border-netflix-border/80 shrink-0 p-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -532,7 +531,7 @@ export default function Revendedores() {
               </div>
             </div>
 
-            <div className="p-4 space-y-3">
+            <div className="plural-modal-body space-y-3">
               <p className="text-[10px] text-gray-500 pb-0.5">
                 Campos com <span className="text-primary-400">*</span> são obrigatórios.
               </p>

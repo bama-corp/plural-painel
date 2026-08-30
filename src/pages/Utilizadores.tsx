@@ -26,6 +26,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAlert } from '../contexts/AlertContext'
 import { api } from '../api/client'
 import { TablePagination, ROWS_PER_PAGE } from '../components/TablePagination'
+import { PluralTableShell } from '../components/PluralTableShell'
 import {
   PANEL_ALERT_CATEGORIES,
   PANEL_ALERT_META,
@@ -737,7 +738,7 @@ export default function Utilizadores() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white flex items-center gap-2">
+          <h1 className="plural-page-title flex items-center gap-2">
             <UserCog className="w-6 h-6" />
             Utilizadores
           </h1>
@@ -861,8 +862,8 @@ export default function Utilizadores() {
       )}
 
       {section === 'operadores' && (
-        <div className="flex flex-wrap items-center gap-2 p-4 rounded-md bg-netflix-card/60 border border-netflix-border/80">
-          <div className="w-44 min-w-[11rem]">
+        <div className="plural-filter-bar">
+          <div className="plural-filter-field">
             <RoveSelect
               compact
               value={operadorFilter.role}
@@ -879,7 +880,7 @@ export default function Utilizadores() {
               ))}
             </RoveSelect>
           </div>
-          <div className="w-40 min-w-[10rem]">
+          <div className="plural-filter-field-sm">
             <RoveSelect
               compact
               value={operadorFilter.status}
@@ -892,7 +893,7 @@ export default function Utilizadores() {
               <option value="suspenso">Suspenso</option>
             </RoveSelect>
           </div>
-          <div className="relative flex-1 min-w-[180px]">
+          <div className="plural-filter-search">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input
               type="text"
@@ -919,8 +920,8 @@ export default function Utilizadores() {
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary-600 border-t-transparent" />
           </div>
         ) : (
-          <div className="plural-table-shell">
-            <table className="plural-table">
+          <PluralTableShell>
+            <table className="plural-table plural-table--cards-md">
               <thead>
                 <tr>
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-400 uppercase tracking-wide w-12">
@@ -957,19 +958,19 @@ export default function Utilizadores() {
                   const roleStyle = ROLE_STYLES[u.role] ?? ROLE_STYLES.geral
                   return (
                     <tr key={u.id} className="hover:bg-netflix-hover/80 transition-colors">
-                      <td className="px-4 py-3 text-center text-gray-400 text-sm">
+                      <td className="plural-table-cell-num px-4 py-3 text-center text-gray-400 text-sm" data-label="Nº">
                         {(operadorPageClamped - 1) * ROWS_PER_PAGE + idx + 1}
                       </td>
-                      <td className="px-4 py-3 text-sm text-white">
+                      <td className="px-4 py-3 text-sm text-white" data-label="Utilizador">
                         <div className="flex flex-col">
                           <span className="font-medium">{u.nome}</span>
                           <span className="text-xs text-gray-400">{u.email}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" data-label="WhatsApp">
                         <RoveWhatsappLink value={u.whatsapp} />
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" data-label="Perfil">
                         <span
                           className={`inline-flex items-center gap-2 px-2.5 py-1 text-xs font-medium rounded-full ${roleStyle.pill}`}
                         >
@@ -977,7 +978,7 @@ export default function Utilizadores() {
                           {roleStyle.label}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" data-label="Estado">
                         <span
                           className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                             (u.status || 'ativo') === 'ativo'
@@ -988,7 +989,7 @@ export default function Utilizadores() {
                           {(u.status || 'ativo') === 'ativo' ? 'Ativo' : 'Suspenso'}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" data-label="Alertas">
                         <button
                           type="button"
                           onClick={() => openAlertsModal(u)}
@@ -1003,11 +1004,11 @@ export default function Utilizadores() {
                           )}
                         </button>
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-300 font-mono">
+                      <td className="px-4 py-3 text-sm text-gray-300 font-mono" data-label="Senha">
                         {renderOperadorPassword(u, showPins)}
                       </td>
-                      <td className="px-4 py-3 text-sm text-gray-400">{formatDate(u.createdAt)}</td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-sm text-gray-400" data-label="Criado em">{formatDate(u.createdAt)}</td>
+                      <td className="plural-table-cell-actions px-4 py-3" data-label="Ações">
                         <div className="flex items-center justify-end gap-1">
                           <button
                             type="button"
@@ -1085,7 +1086,7 @@ export default function Utilizadores() {
               currentPage={operadorPageClamped}
               onPageChange={setTablePage}
             />
-          </div>
+          </PluralTableShell>
         ))}
 
       {section === 'clientes' &&
@@ -1095,8 +1096,8 @@ export default function Utilizadores() {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2 p-4 rounded-md bg-netflix-card/60 border border-netflix-border/80">
-              <div className="w-40 min-w-[10rem]">
+            <div className="plural-filter-bar">
+              <div className="plural-filter-field-sm">
                 <RoveSelect
                   compact
                   value={serviceFilter}
@@ -1109,7 +1110,7 @@ export default function Utilizadores() {
                   <option value="netflix">Clientes Netflix</option>
                 </RoveSelect>
               </div>
-              <div className="w-44 min-w-[11rem]">
+              <div className="plural-filter-field">
                 <RoveSelect
                   compact
                   value={portalFilter}
@@ -1122,7 +1123,7 @@ export default function Utilizadores() {
                   <option value="sem">Sem acesso</option>
                 </RoveSelect>
               </div>
-              <div className="relative flex-1 min-w-[180px]">
+              <div className="plural-filter-search">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                 <input
                   type="text"
@@ -1148,8 +1149,8 @@ export default function Utilizadores() {
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
-            <div className="plural-table-shell">
-              <table className="plural-table">
+            <PluralTableShell>
+              <table className="plural-table plural-table--cards-md">
                 <thead>
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide">Cliente</th>
@@ -1171,12 +1172,12 @@ export default function Utilizadores() {
                   ) : (
                     pagedClients.map((c) => (
                       <tr key={c.id} className="hover:bg-netflix-hover/80 transition-colors">
-                        <td className="px-4 py-3 text-sm text-white font-medium">{c.nome}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-sm text-white font-medium" data-label="Cliente">{c.nome}</td>
+                        <td className="px-4 py-3" data-label="WhatsApp">
                           <RoveWhatsappLink value={c.whatsapp} />
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-300">{SERVICO_LABEL[c.servico] ?? c.servico}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 text-sm text-gray-300" data-label="Serviço">{SERVICO_LABEL[c.servico] ?? c.servico}</td>
+                        <td className="px-4 py-3" data-label="Estado">
                           <span
                             className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${
                               c.status === 'ativo'
@@ -1189,7 +1190,7 @@ export default function Utilizadores() {
                             {c.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3" data-label="Área /cliente">
                           {c.areaClienteAtiva ? (
                             <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-300">
                               <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -1202,10 +1203,10 @@ export default function Utilizadores() {
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-300 font-mono">
+                        <td className="px-4 py-3 text-sm text-gray-300 font-mono" data-label="PIN /cliente">
                           {renderClientPortalPin(c, showPins)}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="plural-table-cell-actions px-4 py-3" data-label="Ações">
                           <div className="flex items-center justify-end gap-1 flex-wrap">
                             <button
                               type="button"
@@ -1239,7 +1240,7 @@ export default function Utilizadores() {
                 currentPage={clientPageClamped}
                 onPageChange={setClientTablePage}
               />
-            </div>
+            </PluralTableShell>
           </div>
         ))}
 

@@ -120,7 +120,7 @@ export function RoveMensalidadeInput({
 
             <div className="p-2.5">
               <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">Valores rápidos</p>
-              <div className="grid grid-cols-2 gap-1.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                 {presets.map((amount) => {
                   const isSelected = value === amount
                   return (
