@@ -17,6 +17,7 @@ import cronRoutes from './routes/cron.js'
 import usersRoutes from './routes/users.js'
 import clientPortalRoutes from './routes/client-portal.js'
 import whatsappRoutes from './routes/whatsapp.js'
+import phRoutes from './routes/ph.js'
 
 const app = express()
 
@@ -44,6 +45,7 @@ app.use('/api/cron', cronRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/client-portal', clientPortalRoutes)
 app.use('/api/whatsapp', whatsappRoutes)
+app.use('/api/ph', phRoutes)
 
 app.get('/api/health', async (_req, res) => {
   try {

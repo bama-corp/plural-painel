@@ -119,6 +119,17 @@ Só se usares o endpoint de alertas com Vercel Cron:
 
 ---
 
+### Painel PH (sincronização)
+
+Só se outro painel for ler clientes/MRR via `GET /api/ph/summary` (ver `docs/PH-API.md`):
+
+| Key            | Descrição |
+|----------------|-----------|
+| `PH_API_KEY`   | Bearer token partilhado com o PH (`VITE_PLURAL_API_KEY` no outro projecto) |
+| `CORS_ORIGINS` | Inclui a origem do PH se o browser chamar a API directamente |
+
+---
+
 ## Resumo rápido – mínimo para avançar
 
 1. **Settings** do projeto → **Environment Variables**.
