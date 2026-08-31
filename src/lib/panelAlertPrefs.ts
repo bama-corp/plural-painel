@@ -95,8 +95,18 @@ export function formatAlertScopesSummary(
 ): string {
   const scopes = effectiveAlertScopes(custom, role)
   if (scopes.length === PANEL_ALERT_CATEGORIES.length) return 'Todos os alertas'
-  if (scopes.length <= 2) {
-    return scopes.map((c) => PANEL_ALERT_META[c].label).join(', ')
+
+  const parts: string[] = []
+  if (scopes.includes('clientes_netflix')) parts.push('Netflix')
+  if (scopes.includes('clientes_iptv')) parts.push('IPTV')
+
+  const rest = scopes.filter((c) => c !== 'clientes_netflix' && c !== 'clientes_iptv')
+  if (parts.length && rest.length === 0) return parts.join(' · ')
+  if (parts.length && rest.length <= 2) {
+    return [...parts, ...rest.map((c) => PANEL_ALERT_META[c].label)].join(' · ')
+  }
+  if (scopes.length <= 3) {
+    return scopes.map((c) => PANEL_ALERT_META[c].label).join(' · ')
   }
   return `${scopes.length} categorias`
 }

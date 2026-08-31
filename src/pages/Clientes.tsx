@@ -286,6 +286,7 @@ export default function Clientes() {
     if (form.servico === 'netflix') {
       if (!(form.perfil ?? '').trim()) return 'Perfil é obrigatório.'
       if (!(form.pin ?? '').trim()) return 'PIN Netflix é obrigatório.'
+      if (!form.dataFim || !String(form.dataFim).trim()) return 'Data fim é obrigatória.'
       if (form.plano === 'Plano Room' && !form.salaId) return 'Selecione a sala (conta) Netflix.'
     }
     return null
@@ -312,6 +313,7 @@ export default function Clientes() {
     if (form.servico === 'netflix') {
       if (!(form.perfil ?? '').trim()) return 'Perfil é obrigatório.'
       if (!(form.pin ?? '').trim()) return 'PIN Netflix é obrigatório.'
+      if (!form.dataFim || !String(form.dataFim).trim()) return 'Data fim é obrigatória.'
       if (form.plano === 'Plano Room' && !form.salaId) return 'Selecione a sala (conta) Netflix.'
     }
     return null
@@ -462,15 +464,15 @@ export default function Clientes() {
       {/* Abas IPTV | NETFLIX + stats + Novo cliente */}
       <div className="space-y-3">
         {(showIptvTab || showNetflixTab) && (
-          <div className="flex w-full gap-1 rounded-md border border-netflix-border/80 bg-netflix-panel/60 p-1">
+          <div className="flex flex-wrap items-center gap-2">
             {showIptvTab && (
               <button
                 type="button"
                 onClick={() => switchTab('iptv')}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:flex-none sm:px-4 ${
+                className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-colors ${
                   tab === 'iptv'
-                    ? 'bg-white text-black shadow-lg shadow-primary-900/30'
-                    : 'text-gray-400 hover:bg-netflix-hover/80 hover:text-white'
+                    ? 'border-white bg-white text-black shadow-lg shadow-primary-900/30'
+                    : 'border-netflix-border/80 bg-netflix-panel/60 text-gray-400 hover:border-netflix-hover hover:bg-netflix-hover/80 hover:text-white'
                 }`}
               >
                 <Tv className="h-4 w-4 shrink-0" />
@@ -481,10 +483,10 @@ export default function Clientes() {
               <button
                 type="button"
                 onClick={() => switchTab('netflix')}
-                className={`flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors sm:flex-none sm:px-4 ${
+                className={`inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2.5 text-sm font-medium transition-colors ${
                   tab === 'netflix'
-                    ? 'bg-white text-black shadow-lg shadow-primary-900/30'
-                    : 'text-gray-400 hover:bg-netflix-hover/80 hover:text-white'
+                    ? 'border-white bg-white text-black shadow-lg shadow-primary-900/30'
+                    : 'border-netflix-border/80 bg-netflix-panel/60 text-gray-400 hover:border-netflix-hover hover:bg-netflix-hover/80 hover:text-white'
                 }`}
               >
                 <Film className="h-4 w-4 shrink-0" />
@@ -1502,10 +1504,6 @@ export default function Clientes() {
                         (form.servico === 'iptv' && PLANOS_IPTV.some((p) => p.id === form.plano)) ||
                         (form.servico === 'netflix' && PLANOS_NETFLIX.some((p) => p.id === form.plano))
                       const valorObrigatorio = isPlanoValorManual(form.servico, form.plano)
-                      const dataFimBloqueada = form.servico === 'netflix'
-                      const dataFimTexto = form.dataFim
-                        ? new Date(String(form.dataFim).slice(0, 10)).toLocaleDateString('pt-PT')
-                        : '—'
 
                       return (
                     <div className={`grid grid-cols-1 sm:grid-cols-2 ${compactClientForm ? 'gap-2' : 'gap-3'}`}>
@@ -1536,44 +1534,21 @@ export default function Clientes() {
                           />
                         )}
                       </div>
-                      {form.servico === 'iptv' ? (
-                        <div>
-                          <label
-                            className={`block font-medium text-gray-300 ${compactClientForm ? 'text-xs mb-1' : 'text-sm mb-0.5'}`}
-                          >
-                            Data fim
-                            <RequiredMark />
-                          </label>
-                          <RoveDatePicker
-                            compact={compactClientForm}
-                            value={form.dataFim ? String(form.dataFim).slice(0, 10) : ''}
-                            onChange={(dataFim) => setForm((f) => ({ ...f, dataFim }))}
-                            title="Selecione a data de renovação"
-                            placeholder="Selecionar data"
-                          />
-                        </div>
-                      ) : (
-                        <div>
-                          <label
-                            className={`block font-medium text-gray-300 ${compactClientForm ? 'text-xs mb-1' : 'text-sm mb-0.5'}`}
-                          >
-                            {form.salaId ? 'Data fim (da sala)' : 'Data fim'}
-                          </label>
-                          {dataFimBloqueada ? (
-                            <div className={compactClientForm ? NEW_CLIENT_LOCKED_SM : NEW_CLIENT_LOCKED}>
-                              <span className="font-medium">{dataFimTexto}</span>
-                              <LockedFieldBadge label={form.salaId ? 'Da sala' : 'Aguarda sala'} />
-                            </div>
-                          ) : (
-                            <RoveDatePicker
-                              compact={compactClientForm}
-                              value={form.dataFim ? String(form.dataFim).slice(0, 10) : ''}
-                              onChange={(dataFim) => setForm((f) => ({ ...f, dataFim }))}
-                              placeholder="Selecionar data"
-                            />
-                          )}
-                        </div>
-                      )}
+                      <div>
+                        <label
+                          className={`block font-medium text-gray-300 ${compactClientForm ? 'text-xs mb-1' : 'text-sm mb-0.5'}`}
+                        >
+                          Data fim
+                          <RequiredMark />
+                        </label>
+                        <RoveDatePicker
+                          compact={compactClientForm}
+                          value={form.dataFim ? String(form.dataFim).slice(0, 10) : ''}
+                          onChange={(dataFim) => setForm((f) => ({ ...f, dataFim }))}
+                          title="Selecione a data de renovação"
+                          placeholder="Selecionar data"
+                        />
+                      </div>
                     </div>
                       )
                     })()}

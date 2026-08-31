@@ -9,6 +9,7 @@ import {
   UserCog,
   AlertTriangle,
   CheckCircle,
+  Check,
   Smartphone,
   ExternalLink,
   Search,
@@ -143,22 +144,34 @@ function AlertScopesEditor({
   role,
   value,
   onChange,
+  compactHeader = false,
 }: {
   role: string
   value: AlertFormState
   onChange: (next: AlertFormState) => void
+  compactHeader?: boolean
 }) {
   const roleDefaults = defaultAlertScopesForRole(role)
-  const groups: Array<{ key: string; title: string; items: PanelAlertCategory[] }> = [
+
+  const groups: Array<{
+    key: string
+    title: string
+    items: PanelAlertCategory[]
+  }> = [
     {
       key: 'clientes',
       title: 'Clientes',
       items: ['clientes_netflix', 'clientes_iptv'],
     },
     {
+      key: 'infra',
+      title: 'Infraestrutura',
+      items: ['salas', 'servidores'],
+    },
+    {
       key: 'operacao',
       title: 'Operação',
-      items: ['financeiro', 'salas', 'servidores', 'indicacoes'],
+      items: ['financeiro', 'indicacoes'],
     },
     {
       key: 'sistema',
@@ -175,21 +188,23 @@ function AlertScopesEditor({
   }
 
   return (
-    <div className="border-t border-netflix-border/60 pt-3 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
-            Alertas WhatsApp
-          </p>
-          <p className="text-[10px] text-gray-600 mt-0.5">
-            Escolha que notificações este operador recebe no WhatsApp.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
+    <div className="space-y-3">
+      <div className={`flex flex-wrap items-center justify-between gap-2 ${compactHeader ? '' : ''}`}>
+        {!compactHeader && (
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+              Alertas WhatsApp
+            </p>
+            <p className="mt-0.5 text-[10px] text-gray-600">
+              Notificações que este operador recebe no WhatsApp.
+            </p>
+          </div>
+        )}
+        <div className={`flex flex-wrap gap-1.5 ${compactHeader ? 'w-full justify-end' : ''}`}>
           <button
             type="button"
             onClick={() => onChange({ mode: 'role_default', scopes: roleDefaults })}
-            className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
+            className={`rounded border px-2 py-1 text-[10px] font-medium transition-colors ${
               value.mode === 'role_default'
                 ? 'border-primary-500/50 bg-primary-500/15 text-primary-200'
                 : 'border-netflix-border/60 text-gray-400 hover:text-gray-200'
@@ -199,17 +214,15 @@ function AlertScopesEditor({
           </button>
           <button
             type="button"
-            onClick={() =>
-              onChange({ mode: 'custom', scopes: [...PANEL_ALERT_CATEGORIES] })
-            }
-            className="px-2 py-1 rounded text-[10px] font-medium border border-netflix-border/60 text-gray-400 hover:text-gray-200 transition-colors"
+            onClick={() => onChange({ mode: 'custom', scopes: [...PANEL_ALERT_CATEGORIES] })}
+            className="rounded border border-netflix-border/60 px-2 py-1 text-[10px] font-medium text-gray-400 transition-colors hover:text-gray-200"
           >
             Todos
           </button>
           <button
             type="button"
             onClick={() => onChange({ mode: 'custom', scopes: [] })}
-            className="px-2 py-1 rounded text-[10px] font-medium border border-netflix-border/60 text-gray-400 hover:text-gray-200 transition-colors"
+            className="rounded border border-netflix-border/60 px-2 py-1 text-[10px] font-medium text-gray-400 transition-colors hover:text-gray-200"
           >
             Nenhum
           </button>
@@ -217,38 +230,61 @@ function AlertScopesEditor({
       </div>
 
       {value.mode === 'role_default' ? (
-        <p className="text-xs text-gray-400 rounded-md border border-netflix-border/50 bg-netflix-panel/40 px-3 py-2">
+        <p className="rounded-md border border-netflix-border/50 bg-netflix-panel/40 px-3 py-2 text-xs text-gray-400">
           Usa o padrão do perfil{' '}
           <span className="text-gray-300">{ROLE_STYLES[role]?.label ?? role}</span>:{' '}
           {roleDefaults.map((c) => PANEL_ALERT_META[c].label).join(', ')}
         </p>
       ) : (
-        <div className="space-y-2.5">
+        <div className="space-y-3">
           {groups.map((g) => (
             <div key={g.key}>
-              <p className="text-[10px] font-medium text-gray-500 mb-1">{g.title}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+              <p className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                {g.title}
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
                 {g.items.map((cat) => {
                   const meta = PANEL_ALERT_META[cat]
                   const checked = value.scopes.includes(cat)
                   return (
                     <label
                       key={cat}
-                      className={`flex items-start gap-2 rounded-md border px-2.5 py-2 cursor-pointer transition-colors ${
+                      className={`group flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 transition-all ${
                         checked
-                          ? 'border-primary-500/40 bg-primary-500/10'
-                          : 'border-netflix-border/50 bg-netflix-panel/30 hover:bg-netflix-hover/40'
+                          ? 'border-white/25 bg-white/[0.08] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]'
+                          : 'border-netflix-border/50 bg-black/20 hover:border-white/15 hover:bg-netflix-hover/40'
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 rounded border-netflix-border"
-                        checked={checked}
-                        onChange={() => toggleScope(cat)}
-                      />
+                      <span className="relative mt-0.5 inline-flex shrink-0">
+                        <input
+                          type="checkbox"
+                          className="peer sr-only"
+                          checked={checked}
+                          onChange={() => toggleScope(cat)}
+                        />
+                        <span
+                          aria-hidden
+                          className={`flex h-4 w-4 items-center justify-center rounded-[5px] border transition-all ${
+                            checked
+                              ? 'border-white bg-white text-black shadow-sm shadow-black/40'
+                              : 'border-white/25 bg-transparent group-hover:border-white/45'
+                          }`}
+                        >
+                          <Check
+                            className={`h-3 w-3 transition-opacity ${checked ? 'opacity-100' : 'opacity-0'}`}
+                            strokeWidth={3}
+                          />
+                        </span>
+                      </span>
                       <span className="min-w-0">
-                        <span className="block text-xs font-medium text-gray-200">{meta.label}</span>
-                        <span className="block text-[10px] text-gray-500 leading-snug">
+                        <span
+                          className={`block text-xs font-medium transition-colors ${
+                            checked ? 'text-white' : 'text-gray-200'
+                          }`}
+                        >
+                          {meta.label}
+                        </span>
+                        <span className="mt-0.5 block text-[10px] leading-snug text-gray-500">
                           {meta.description}
                         </span>
                       </span>
@@ -258,10 +294,11 @@ function AlertScopesEditor({
               </div>
             </div>
           ))}
-          {value.scopes.length === 0 && (
-            <p className="text-xs text-amber-400/90">Seleccione pelo menos uma categoria.</p>
-          )}
         </div>
+      )}
+
+      {value.mode === 'custom' && value.scopes.length === 0 && (
+        <p className="text-xs text-amber-400/90">Seleccione pelo menos uma categoria.</p>
       )}
     </div>
   )
@@ -1579,61 +1616,31 @@ export default function Utilizadores() {
       )}
 
       {modal && (
-        <RoveModalOverlay>
-          <div className="bg-netflix-card rounded-md shadow-2xl border border-netflix-border/80 max-w-lg w-full overflow-hidden max-h-[90vh] flex flex-col">
-            <div className="border-b border-netflix-border/80 shrink-0 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="p-2 rounded-md bg-primary-600/20 text-primary-400 shrink-0">
-                    <UserCog className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="text-lg font-semibold text-white">
-                      {modal === 'create' ? 'Novo utilizador' : 'Editar utilizador'}
-                    </h3>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {modal === 'create'
-                        ? 'Operador com acesso ao painel administrativo'
-                        : editing?.nome}
-                    </p>
-                    <div className="h-0.5 w-10 bg-primary-500 rounded-full mt-2" />
-                  </div>
-                </div>
-                <div className="w-32 shrink-0 sm:w-36">
-                  <RoveFormLabel required>Perfil</RoveFormLabel>
-                  <RoveSelect
-                    compact
-                    required
-                    value={form.role}
-                    onChange={(e) => {
-                      const role = e.target.value
-                      setForm((f) => ({
-                        ...f,
-                        role,
-                        alerts:
-                          f.alerts.mode === 'role_default'
-                            ? { mode: 'role_default', scopes: defaultAlertScopesForRole(role) }
-                            : f.alerts,
-                      }))
-                    }}
-                  >
-                    {ROLES_OPERADORES.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </RoveSelect>
-                </div>
+        <RoveModalOverlay dimClassName="bg-black/55 backdrop-blur-md">
+          <div className="flex w-full max-w-4xl max-h-[90dvh] flex-col gap-3 overflow-hidden overflow-y-auto">
+            <div className="flex shrink-0 items-end justify-between gap-3 px-0.5">
+              <div className="min-w-0">
+                <h3 className="text-lg font-semibold text-white">
+                  {modal === 'create' ? 'Novo utilizador' : 'Editar utilizador'}
+                </h3>
+                <div className="mt-2 h-0.5 w-10 rounded-full bg-primary-500" />
               </div>
+              <p className="shrink-0 pb-0.5 text-[10px] text-gray-500">
+                Campos com <span className="text-primary-400">*</span> são obrigatórios.
+              </p>
             </div>
 
-            <form onSubmit={modal === 'create' ? handleCreate : handleEdit} className="flex flex-col min-h-0 flex-1">
-              <div className="p-4 space-y-3 overflow-y-auto flex-1">
-                <p className="text-[10px] text-gray-500 pb-0.5">
-                  Campos com <span className="text-primary-400">*</span> são obrigatórios.
-                </p>
+            <form
+              onSubmit={modal === 'create' ? handleCreate : handleEdit}
+              className="flex min-h-0 flex-1 flex-col gap-3"
+            >
+              <div className="grid min-h-0 grid-cols-1 gap-3 overflow-y-auto lg:grid-cols-2">
+                {/* Card 1 — dados do utilizador */}
+                <div className="space-y-3 self-start rounded-md bg-netflix-card p-4 plural-edge">
+                  <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                    Dados do utilizador
+                  </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <RoveFormLabel required>Nome</RoveFormLabel>
                     <input
@@ -1645,6 +1652,7 @@ export default function Utilizadores() {
                       className={ROVE_FORM_INPUT_SM}
                     />
                   </div>
+
                   <div>
                     <RoveFormLabel required>Email</RoveFormLabel>
                     <input
@@ -1657,63 +1665,101 @@ export default function Utilizadores() {
                       className={ROVE_FORM_INPUT_SM}
                     />
                   </div>
-                </div>
 
-                <div>
-                  <RoveFormLabel>WhatsApp</RoveFormLabel>
-                  <WhatsappAoInput
-                    compact
-                    value={form.whatsapp}
-                    onChange={(whatsapp) => setForm((f) => ({ ...f, whatsapp }))}
-                  />
-                  <p className="text-[10px] text-gray-600 mt-1">
-                    Necessário para receber alertas no telemóvel.
-                  </p>
-                </div>
-
-                <AlertScopesEditor
-                  role={form.role}
-                  value={form.alerts}
-                  onChange={(alerts) => setForm((f) => ({ ...f, alerts }))}
-                />
-
-                {modal === 'create' ? (
-                  <div className="border-t border-netflix-border/60 pt-3">
-                    <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500 mb-2.5">
-                      Acesso ao painel
+                  <div>
+                    <RoveFormLabel>WhatsApp</RoveFormLabel>
+                    <WhatsappAoInput
+                      compact
+                      value={form.whatsapp}
+                      onChange={(whatsapp) => setForm((f) => ({ ...f, whatsapp }))}
+                    />
+                    <p className="mt-1 text-[10px] text-gray-600">
+                      Necessário para receber alertas no telemóvel.
                     </p>
-                    <div>
-                      <RoveFormLabel required>Senha</RoveFormLabel>
-                      <input
-                        type="password"
-                        required
-                        autoComplete="new-password"
-                        value={form.password}
-                        onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
-                        placeholder="Mín. 6 caracteres"
-                        className={ROVE_FORM_INPUT_SM}
-                      />
-                    </div>
                   </div>
-                ) : (
-                  <p className="text-[10px] text-gray-500 border-t border-netflix-border/60 pt-3">
-                    Para alterar a senha, use a ação &quot;Redefinir senha&quot; na tabela.
-                  </p>
-                )}
+
+                  <div>
+                    <RoveFormLabel required>Perfil</RoveFormLabel>
+                    <RoveSelect
+                      compact
+                      required
+                      value={form.role}
+                      onChange={(e) => {
+                        const role = e.target.value
+                        setForm((f) => ({
+                          ...f,
+                          role,
+                          alerts:
+                            f.alerts.mode === 'role_default'
+                              ? { mode: 'role_default', scopes: defaultAlertScopesForRole(role) }
+                              : f.alerts,
+                        }))
+                      }}
+                    >
+                      {ROLES_OPERADORES.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </RoveSelect>
+                  </div>
+
+                  {modal === 'create' ? (
+                    <div className="border-t border-netflix-border/60 pt-3">
+                      <p className="mb-2.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                        Acesso ao painel
+                      </p>
+                      <div>
+                        <RoveFormLabel required>Senha</RoveFormLabel>
+                        <input
+                          type="password"
+                          required
+                          autoComplete="new-password"
+                          value={form.password}
+                          onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))}
+                          placeholder="Mín. 6 caracteres"
+                          className={ROVE_FORM_INPUT_SM}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="border-t border-netflix-border/60 pt-3 text-[10px] text-gray-500">
+                      Para alterar a senha, use a ação &quot;Redefinir senha&quot; na tabela.
+                    </p>
+                  )}
+                </div>
+
+                {/* Card 2 — alertas WhatsApp */}
+                <div className="space-y-3 self-start rounded-md bg-netflix-card p-4 plural-edge">
+                  <div>
+                    <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                      Alertas WhatsApp
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-gray-600">
+                      Notificações que este operador recebe no telemóvel.
+                    </p>
+                  </div>
+                  <AlertScopesEditor
+                    compactHeader
+                    role={form.role}
+                    value={form.alerts}
+                    onChange={(alerts) => setForm((f) => ({ ...f, alerts }))}
+                  />
+                </div>
               </div>
 
-              <div className="flex gap-2 p-4 pt-2 border-t border-netflix-border/80 shrink-0">
+              <div className="flex shrink-0 justify-end gap-2 px-0.5 pb-1">
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="py-1.5 px-3 border border-netflix-border rounded-md text-xs font-medium text-gray-300 bg-netflix-panel hover:bg-netflix-hover transition-colors"
+                  className="rounded-md border border-netflix-border bg-netflix-panel px-4 py-2.5 text-sm font-medium text-gray-300 transition-colors hover:bg-netflix-hover"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitLoading}
-                  className="flex-1 py-1.5 px-3 bg-white text-black rounded-md text-xs font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors shadow-lg shadow-primary-900/30"
+                  className="rounded-md bg-white px-5 py-2.5 text-sm font-medium text-black shadow-lg shadow-primary-900/30 transition-colors hover:bg-primary-700 disabled:opacity-50"
                 >
                   {submitLoading ? 'A guardar…' : modal === 'create' ? 'Criar utilizador' : 'Guardar'}
                 </button>

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -18,6 +19,8 @@ const MONTHS_PT = [
 ] as const
 
 const WEEKDAYS_PT = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'] as const
+
+const PANEL_WIDTH = 296
 
 function parseIsoDate(value: string): Date | null {
   if (!value) return null
@@ -61,6 +64,11 @@ function getCalendarDays(year: number, month: number): (Date | null)[] {
   return days
 }
 
+type PanelLayout = {
+  left: number
+  bottom: number
+}
+
 type RoveDatePickerProps = {
   value: string
   onChange: (value: string) => void
@@ -82,7 +90,9 @@ export function RoveDatePicker({
   allowPastDates = false,
 }: RoveDatePickerProps) {
   const rootRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
+  const [panelLayout, setPanelLayout] = useState<PanelLayout | null>(null)
   const selected = parseIsoDate(value)
   const [view, setView] = useState(() => selected ?? new Date())
   const today = useMemo(() => startOfDay(new Date()), [])
@@ -91,21 +101,45 @@ export function RoveDatePicker({
     if (selected) setView(selected)
   }, [value])
 
+  const updatePanelLayout = useCallback(() => {
+    if (!rootRef.current) return
+    const rect = rootRef.current.getBoundingClientRect()
+    const gap = 8
+    let left = rect.left
+    const maxLeft = window.innerWidth - PANEL_WIDTH - 8
+    if (left > maxLeft) left = Math.max(8, maxLeft)
+
+    // Sempre para cima (ancora pelo bottom — não usa translateY, evita conflito com framer-motion)
+    setPanelLayout({
+      left,
+      bottom: window.innerHeight - rect.top + gap,
+    })
+  }, [])
+
   useEffect(() => {
     if (!open) return
+    updatePanelLayout()
     const onPointerDown = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
+      const target = e.target as Node
+      if (rootRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      setOpen(false)
     }
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
+    const onReposition = () => updatePanelLayout()
     document.addEventListener('mousedown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
+    window.addEventListener('resize', onReposition)
+    window.addEventListener('scroll', onReposition, true)
     return () => {
       document.removeEventListener('mousedown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
+      window.removeEventListener('resize', onReposition)
+      window.removeEventListener('scroll', onReposition, true)
     }
-  }, [open])
+  }, [open, updatePanelLayout])
 
   const days = getCalendarDays(view.getFullYear(), view.getMonth())
 
@@ -119,13 +153,133 @@ export function RoveDatePicker({
     setView((v) => new Date(v.getFullYear(), v.getMonth() + delta, 1))
   }
 
+  function toggleOpen() {
+    if (disabled) return
+    if (!open) updatePanelLayout()
+    setOpen((o) => !o)
+  }
+
+  const calendarPanel =
+    open && panelLayout ? (
+      <motion.div
+        ref={panelRef}
+        initial={{ opacity: 0, y: 6, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 6, scale: 0.98 }}
+        transition={{ duration: 0.15 }}
+        style={{
+          position: 'fixed',
+          bottom: panelLayout.bottom,
+          left: panelLayout.left,
+          width: PANEL_WIDTH,
+          zIndex: 220,
+        }}
+        className="overflow-hidden rounded-md border border-netflix-border bg-netflix-card plural-edge shadow-xl"
+      >
+        <div className="border-b border-netflix-border/80 bg-netflix-panel px-3 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => shiftMonth(-1)}
+              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Mês anterior"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="text-center">
+              <p className="text-sm font-semibold text-white">
+                {MONTHS_PT[view.getMonth()]} {view.getFullYear()}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => shiftMonth(1)}
+              className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="Mês seguinte"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-3">
+          <div className="mb-2 grid grid-cols-7 gap-1">
+            {WEEKDAYS_PT.map((day) => (
+              <span
+                key={day}
+                className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500"
+              >
+                {day}
+              </span>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((date, i) => {
+              if (!date) {
+                return <span key={`empty-${i}`} className="h-9" aria-hidden />
+              }
+
+              const past = isPastDate(date, today)
+              const isSelected = !!(selected && sameDay(date, selected))
+              const isToday = sameDay(date, today)
+              const isDisabled = !allowPastDates && past && !isSelected
+
+              return (
+                <button
+                  key={toIsoDate(date)}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => pick(date)}
+                  aria-disabled={isDisabled}
+                  className={`relative flex h-9 items-center justify-center rounded-md text-sm font-medium tabular-nums transition-all ${
+                    isSelected
+                      ? 'bg-white text-black shadow-sm'
+                      : isDisabled
+                        ? 'cursor-not-allowed text-gray-600 opacity-45'
+                        : isToday
+                          ? 'border border-netflix-border bg-netflix-hover text-white'
+                          : 'text-gray-200 hover:bg-netflix-hover hover:text-white'
+                  }`}
+                >
+                  {date.getDate()}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 border-t border-netflix-border/80 bg-netflix-panel/60 px-3 py-2">
+          <button
+            type="button"
+            onClick={() => pick(today)}
+            className="rounded-md px-2.5 py-1.5 text-xs font-semibold text-primary-300 transition-colors hover:bg-primary-600/20 hover:text-primary-200"
+          >
+            Hoje
+          </button>
+          {value && (
+            <button
+              type="button"
+              onClick={() => {
+                onChange('')
+                setOpen(false)
+              }}
+              className="rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200"
+            >
+              Limpar
+            </button>
+          )}
+        </div>
+      </motion.div>
+    ) : null
+
   return (
     <div ref={rootRef} className="relative">
       <button
         type="button"
         title={title}
         disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleOpen}
         className={`flex w-full items-center justify-between gap-2 border border-netflix-border bg-netflix-panel text-left transition-colors outline-none ${
           compact ? 'min-h-[32px] rounded-md px-2.5 py-1.5 text-xs' : 'min-h-[42px] rounded-md px-3 py-2.5 text-sm'
         } ${
@@ -140,112 +294,8 @@ export function RoveDatePicker({
         <Calendar className={`shrink-0 ${compact ? 'h-3.5 w-3.5' : 'h-4 w-4'} ${open ? 'text-primary-400' : 'text-gray-500'}`} />
       </button>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.98 }}
-            transition={{ duration: 0.15 }}
-            className="absolute bottom-[calc(100%+0.5rem)] left-0 z-[60] w-[min(100%,18.5rem)] overflow-hidden rounded-md border border-netflix-border bg-netflix-card plural-edge shadow-xl"
-          >
-            <div className="border-b border-netflix-border/80 bg-netflix-panel px-3 py-3">
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => shiftMonth(-1)}
-                  className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Mês anterior"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </button>
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-white">
-                    {MONTHS_PT[view.getMonth()]} {view.getFullYear()}
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => shiftMonth(1)}
-                  className="rounded-md p-1.5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
-                  aria-label="Mês seguinte"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="p-3">
-              <div className="mb-2 grid grid-cols-7 gap-1">
-                {WEEKDAYS_PT.map((day) => (
-                  <span
-                    key={day}
-                    className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500"
-                  >
-                    {day}
-                  </span>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-7 gap-1">
-                {days.map((date, i) => {
-                  if (!date) {
-                    return <span key={`empty-${i}`} className="h-9" aria-hidden />
-                  }
-
-                  const past = isPastDate(date, today)
-                  const isSelected = !!(selected && sameDay(date, selected))
-                  const isToday = sameDay(date, today)
-                  const isDisabled = !allowPastDates && past && !isSelected
-
-                  return (
-                    <button
-                      key={toIsoDate(date)}
-                      type="button"
-                      disabled={isDisabled}
-                      onClick={() => pick(date)}
-                      aria-disabled={isDisabled}
-                      className={`relative flex h-9 items-center justify-center rounded-md text-sm font-medium tabular-nums transition-all ${
-                        isSelected
-                          ? 'bg-white text-black shadow-sm'
-                          : isDisabled
-                            ? 'cursor-not-allowed text-gray-600 opacity-45'
-                            : isToday
-                              ? 'border border-netflix-border bg-netflix-hover text-white'
-                              : 'text-gray-200 hover:bg-netflix-hover hover:text-white'
-                      }`}
-                    >
-                      {date.getDate()}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 border-t border-netflix-border/80 bg-netflix-panel/60 px-3 py-2">
-              <button
-                type="button"
-                onClick={() => pick(today)}
-                className="rounded-md px-2.5 py-1.5 text-xs font-semibold text-primary-300 transition-colors hover:bg-primary-600/20 hover:text-primary-200"
-              >
-                Hoje
-              </button>
-              {value && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onChange('')
-                    setOpen(false)
-                  }}
-                  className="rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-400 transition-colors hover:bg-white/5 hover:text-gray-200"
-                >
-                  Limpar
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {typeof document !== 'undefined' &&
+        createPortal(<AnimatePresence>{calendarPanel}</AnimatePresence>, document.body)}
     </div>
   )
 }
