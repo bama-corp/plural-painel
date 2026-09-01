@@ -17,7 +17,8 @@ import {
   getPortalPinPlainMap,
   setPortalPinPlainInDb,
 } from '../lib/portalPinPlain.js'
-import { ensureClientRoveId, getRoveIdsMap } from '../lib/roveId.js'
+import { ensureClientTableColumns } from '../lib/clientSchema.js'
+import { ensureClientRoveId, ensureRoveIdsForClients } from '../lib/roveId.js'
 import { decryptField, encryptField } from '../lib/fieldCrypto.js'
 
 const router = Router()
@@ -89,7 +90,10 @@ router.get('/', async (req, res) => {
   const includeCredenciais =
     canManageClients(user.role) && String(req.query.includeCredenciais) === '1'
   const roleFilter = getRoleServicoFilter(user.role)
-  await ensurePortalPinPlainColumn().catch(() => {})
+  await Promise.all([
+    ensureClientTableColumns().catch(() => {}),
+    ensurePortalPinPlainColumn().catch(() => {}),
+  ])
 
   // Atualizar automaticamente para vencido: clientes ativos cuja dataFim já passou
   const today = new Date()
@@ -161,9 +165,18 @@ router.get('/', async (req, res) => {
     include: { servidor: true, revendedor: true, sala: true },
     orderBy: { dataFim: 'asc' },
   })
+  const clientIds = clients.map((c) => c.id)
   const [pinPlainById, roveById] = await Promise.all([
-    includePortalPin ? getPortalPinPlainMap(clients.map((c) => c.id)) : Promise.resolve(null),
-    getRoveIdsMap(clients.map((c) => c.id)),
+    includePortalPin
+      ? getPortalPinPlainMap(clientIds).catch((err) => {
+          console.error('[clients] portal PIN map:', err)
+          return null
+        })
+      : Promise.resolve(null),
+    ensureRoveIdsForClients(clientIds).catch((err) => {
+      console.error('[clients] ROVE IDs:', err)
+      return new Map<number, string>()
+    }),
   ])
   const enriched = clients.map((c) => {
     const areaClienteAtiva = !!c.portalPinHash
@@ -174,7 +187,7 @@ router.get('/', async (req, res) => {
     const fromDb = pinPlainById?.get(Number(c.id))
     return {
       ...base,
-      roveId: roveById.get(c.id) ?? null,
+      roveId: roveById.get(c.id) ?? c.roveId ?? null,
       areaClienteAtiva,
       ...(includePortalPin
         ? {
@@ -203,7 +216,10 @@ router.get('/:id', async (req, res) => {
 })
 
 router.post('/', auditLog('create_client', 'client'), async (req, res) => {
-  await ensurePortalPinPlainColumn().catch(() => {})
+  await Promise.all([
+    ensureClientTableColumns().catch(() => {}),
+    ensurePortalPinPlainColumn().catch(() => {}),
+  ])
   const user = (req as unknown as { user: AuthPayload }).user
   if (!canManageClients(user.role)) return res.status(403).json({ error: 'Sem permissão para criar clientes' })
   const body = req.body
@@ -272,7 +288,12 @@ router.post('/', auditLog('create_client', 'client'), async (req, res) => {
       `Inscrição Netflix pendente: ${client.nome} — plano ${client.plano}.`
     )
   }
-  const roveId = await ensureClientRoveId(client.id)
+  let roveId: string | null = null
+  try {
+    roveId = await ensureClientRoveId(client.id)
+  } catch (err) {
+    console.error('[clients] ROVE ID no create:', err)
+  }
   res.status(201).json({
     ...sanitizeClientDetail({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
     roveId,

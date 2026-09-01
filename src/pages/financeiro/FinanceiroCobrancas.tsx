@@ -30,7 +30,7 @@ export function FinanceiroCobrancas({
   servidorId?: number | null
   onChanged?: () => void
 }) {
-  const { showError, showInfo } = useAlert()
+  const { showError, showSuccess } = useAlert()
   const [filtro, setFiltro] = useState<CobrancaFiltro>(initialFiltro ?? 'vencidos')
   const [clients, setClients] = useState<ClienteFinanceiro[]>([])
   const [loading, setLoading] = useState(true)
@@ -86,7 +86,7 @@ export function FinanceiroCobrancas({
         await api.post(`/api/clients/${clientRenovar.id}/ativar`)
       }
       await api.post(`/api/clients/${clientRenovar.id}/renovar`, { meses })
-      showInfo(`Renovação de ${meses} mês(es) registada para "${clientRenovar.nome}".`)
+      showSuccess(`Renovação de ${meses} mês(es) registada para «${clientRenovar.nome}».`)
       setClientRenovar(null)
       setRenovarMeses('')
       await load()
@@ -105,7 +105,7 @@ export function FinanceiroCobrancas({
     setActionId(clientMarcarPago.id)
     try {
       await api.post(`/api/clients/${clientMarcarPago.id}/marcar-pago`, {})
-      showInfo(`Pagamento registado para "${clientMarcarPago.nome}".`)
+      showSuccess(`Pagamento registado para «${clientMarcarPago.nome}».`)
       setClientMarcarPago(null)
       await load()
       onChanged?.()
@@ -123,7 +123,7 @@ export function FinanceiroCobrancas({
     setActionId(clientAtivar.id)
     try {
       await api.post(`/api/clients/${clientAtivar.id}/ativar`)
-      showInfo(`Cliente "${clientAtivar.nome}" reativado.`)
+      showSuccess(`Cliente «${clientAtivar.nome}» reactivado.`)
       setClientAtivar(null)
       await load()
       onChanged?.()

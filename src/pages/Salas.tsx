@@ -22,7 +22,7 @@ interface Sala {
 }
 
 export default function Salas() {
-  const { showError, showWarning, showInfo } = useAlert()
+  const { showError, showWarning, showSuccess } = useAlert()
   const [list, setList] = useState<Sala[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<'new' | 'edit' | null>(null)
@@ -93,23 +93,26 @@ export default function Salas() {
       return
     }
     try {
+      const nomeSala = form.nome.trim()
       if (modal === 'new') {
         await api.post('/api/salas', {
-          nome: form.nome.trim(),
+          nome: nomeSala,
           email: form.email?.trim() || null,
           senha: form.senha || null,
           observacoes: form.observacoes?.trim() || null,
           dataFim: form.dataFim || undefined,
         })
+        showSuccess(`Sala «${nomeSala}» criada com sucesso.`)
       } else if (form.id) {
         await api.patch(`/api/salas/${form.id}`, {
-          nome: form.nome.trim(),
+          nome: nomeSala,
           email: form.email?.trim() || null,
           senha: form.senha || null,
           observacoes: form.observacoes?.trim() || null,
           dataFim: form.dataFim || null,
           status: form.status ?? 'ativo',
         })
+        showSuccess(`Sala «${nomeSala}» actualizada.`)
       }
       setModal(null)
       setShowSenha(false)
@@ -124,6 +127,7 @@ export default function Salas() {
     if (!salaSuspender) return
     try {
       await api.post(`/api/salas/${salaSuspender.id}/suspender`, {})
+      showSuccess(`Sala «${salaSuspender.nome}» suspensa.`)
       setSalaSuspender(null)
       load()
     } catch (e) {
@@ -135,6 +139,7 @@ export default function Salas() {
     if (!salaAtivar) return
     try {
       await api.post(`/api/salas/${salaAtivar.id}/ativar`, {})
+      showSuccess(`Sala «${salaAtivar.nome}» activada.`)
       setSalaAtivar(null)
       load()
     } catch (e) {
@@ -146,6 +151,7 @@ export default function Salas() {
     if (!salaToDelete) return
     try {
       await api.delete(`/api/salas/${salaToDelete.id}`)
+      showSuccess(`Sala «${salaToDelete.nome}» eliminada.`)
       setSalaToDelete(null)
       load()
     } catch (e) {
@@ -158,7 +164,7 @@ export default function Salas() {
     try {
       await api.post(`/api/salas/${salaToRenovar.id}/pagar-mes`, {})
       setSalaToRenovar(null)
-      showInfo(`Sala "${salaToRenovar.nome}" renovada por mais 1 mês.`)
+      showSuccess(`Sala «${salaToRenovar.nome}» renovada por mais 1 mês.`)
       load()
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Erro ao renovar sala')

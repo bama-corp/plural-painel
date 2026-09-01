@@ -54,7 +54,7 @@ const sectionMotion = {
 
 export default function MeuPerfil() {
   const { user, loading: authLoading, refetch } = useAuth()
-  const { showError, showInfo } = useAlert()
+  const { showError, showSuccess } = useAlert()
   const [saving, setSaving] = useState(false)
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
@@ -124,7 +124,7 @@ export default function MeuPerfil() {
       setNewPassword('')
       setConfirmPassword('')
       await refetch()
-      showInfo('Perfil atualizado com sucesso.')
+      showSuccess('Perfil actualizado com sucesso.')
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Erro ao guardar')
     } finally {

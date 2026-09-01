@@ -149,7 +149,7 @@ function daysUntil(date: string) {
 
 export default function Clientes() {
   const { user } = useAuth()
-  const { showError, showWarning } = useAlert()
+  const { showError, showWarning, showSuccess } = useAlert()
   const role = user?.role
   const operadorNetflix = role === 'netflix'
   const operadorIptv = role === 'iptv'
@@ -334,6 +334,7 @@ export default function Clientes() {
       }
     }
     try {
+      const nomeCliente = (form.nome ?? '').trim()
       if (modal === 'new') {
         const body: Record<string, unknown> = {
           ...form,
@@ -347,6 +348,7 @@ export default function Clientes() {
         delete body.removerPinPortal
         body.portalPin = String(form.portalPin).trim()
         await api.post<Client>('/api/clients', body)
+        showSuccess(`Cliente «${nomeCliente}» criado com sucesso.`)
       } else if (form.id) {
         const patch: Record<string, unknown> = { ...form, salaId: form.salaId ?? null }
         delete patch.areaClienteAtiva
@@ -355,6 +357,7 @@ export default function Clientes() {
         if (form.removerPinPortal) patch.portalPin = ''
         else if (form.portalPin?.trim() && form.portalPin.trim().length >= 4) patch.portalPin = form.portalPin.trim()
         await api.patch(`/api/clients/${form.id}`, patch)
+        showSuccess(`Cliente «${nomeCliente}» actualizado.`)
       }
       setModal(null)
       {
@@ -388,6 +391,7 @@ export default function Clientes() {
     const meses = Math.min(24, Math.max(1, renovarMeses))
     try {
       await api.post(`/api/clients/${clientRenovar.id}/renovar`, { meses })
+      showSuccess(`Renovação de ${meses} mês(es) registada para «${clientRenovar.nome}».`)
       setClientRenovar(null)
       setRenovarMeses('')
       load()
@@ -400,6 +404,7 @@ export default function Clientes() {
     if (!clientSuspender) return
     try {
       await api.post(`/api/clients/${clientSuspender.id}/suspender`)
+      showSuccess(`Cliente «${clientSuspender.nome}» suspenso.`)
       setClientSuspender(null)
       load()
     } catch (e) {
@@ -411,6 +416,7 @@ export default function Clientes() {
     if (!clientAtivar) return
     try {
       await api.post(`/api/clients/${clientAtivar.id}/ativar`)
+      showSuccess(`Cliente «${clientAtivar.nome}» reactivado.`)
       setClientAtivar(null)
       load()
     } catch (e) {
@@ -422,6 +428,7 @@ export default function Clientes() {
     if (!clientSala) return
     try {
       await api.patch(`/api/clients/${clientSala.id}`, { salaId: salaIdSelect === '' ? null : salaIdSelect })
+      showSuccess(`Sala atribuída a «${clientSala.nome}».`)
       setModal(null)
       setClientSala(null)
       setSalaIdSelect('')
@@ -435,6 +442,7 @@ export default function Clientes() {
     if (!clientToDelete) return
     try {
       await api.delete(`/api/clients/${clientToDelete.id}`)
+      showSuccess(`Cliente «${clientToDelete.nome}» eliminado.`)
       setClientToDelete(null)
       load()
     } catch (e) {

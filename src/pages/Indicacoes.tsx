@@ -42,7 +42,7 @@ interface Client {
 }
 
 export default function Indicacoes() {
-  const { showError, showWarning } = useAlert()
+  const { showError, showWarning, showSuccess } = useAlert()
   const [list, setList] = useState<Indicacao[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
@@ -135,12 +135,14 @@ export default function Indicacoes() {
           indicadoWhatsapp: whatsappPreenchido ? whatsapp : '',
           status: form.status || 'pendente',
         })
+        showSuccess(`Indicação de «${nome}» actualizada.`)
       } else {
         await api.post('/api/indicacoes', {
           indicadorRoveId: form.indicadorRoveId,
           indicadoNome: nome,
           indicadoWhatsapp: whatsappPreenchido ? whatsapp : undefined,
         })
+        showSuccess(`Indicação de «${nome}» registada.`)
       }
       setModal(null)
       setForm(emptyForm())
@@ -154,6 +156,7 @@ export default function Indicacoes() {
     if (!indicacaoToConfirmar) return
     try {
       await api.patch(`/api/indicacoes/${indicacaoToConfirmar.id}`, { status: 'confirmada' })
+      showSuccess(`Indicação de «${indicacaoToConfirmar.indicadoNome}» confirmada.`)
       setIndicacaoToConfirmar(null)
       load()
     } catch (e) {
@@ -165,6 +168,7 @@ export default function Indicacoes() {
     if (!indicacaoToReverter) return
     try {
       await api.patch(`/api/indicacoes/${indicacaoToReverter.id}`, { status: 'pendente' })
+      showSuccess(`Indicação de «${indicacaoToReverter.indicadoNome}» reposta como pendente.`)
       setIndicacaoToReverter(null)
       load()
     } catch (e) {
@@ -176,6 +180,7 @@ export default function Indicacoes() {
     if (!indicacaoToDelete) return
     try {
       await api.delete(`/api/indicacoes/${indicacaoToDelete.id}`)
+      showSuccess(`Indicação de «${indicacaoToDelete.indicadoNome}» eliminada.`)
       setIndicacaoToDelete(null)
       load()
     } catch (e) {

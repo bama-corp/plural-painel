@@ -1,8 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { AlertCircle, AlertTriangle, Info, X } from 'lucide-react'
+import { AlertCircle, AlertTriangle, CheckCircle2, Info, X } from 'lucide-react'
 
-type AlertVariant = 'error' | 'warning' | 'info'
+type AlertVariant = 'error' | 'warning' | 'info' | 'success'
 
 interface ToastItem {
   id: number
@@ -15,6 +15,7 @@ interface AlertContextValue {
   showError: (message: string) => void
   showWarning: (message: string) => void
   showInfo: (message: string) => void
+  showSuccess: (message: string) => void
 }
 
 const AlertContext = createContext<AlertContextValue | null>(null)
@@ -41,6 +42,12 @@ const variantStyles: Record<
     iconColor: 'text-neutral-700',
     text: 'text-neutral-800',
   },
+  success: {
+    icon: CheckCircle2,
+    wrap: 'bg-emerald-50 shadow-[0_8px_30px_rgba(0,0,0,0.12),0_0_0_1px_rgba(16,185,129,0.22)]',
+    iconColor: 'text-emerald-600',
+    text: 'text-emerald-900',
+  },
 }
 
 const AUTO_DISMISS_MS = 5200
@@ -60,8 +67,9 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   const showError = useCallback((message: string) => showAlert(message, 'error'), [showAlert])
   const showWarning = useCallback((message: string) => showAlert(message, 'warning'), [showAlert])
   const showInfo = useCallback((message: string) => showAlert(message, 'info'), [showAlert])
+  const showSuccess = useCallback((message: string) => showAlert(message, 'success'), [showAlert])
 
-  const value: AlertContextValue = { showAlert, showError, showWarning, showInfo }
+  const value: AlertContextValue = { showAlert, showError, showWarning, showInfo, showSuccess }
 
   return (
     <AlertContext.Provider value={value}>

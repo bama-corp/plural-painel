@@ -306,7 +306,7 @@ function AlertScopesEditor({
 
 export default function Utilizadores() {
   const { user } = useAuth()
-  const { showError, showWarning, showInfo } = useAlert()
+  const { showError, showWarning, showSuccess } = useAlert()
   const [section, setSection] = useState<'operadores' | 'clientes'>('operadores')
   const [users, setUsers] = useState<UserRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -495,7 +495,7 @@ export default function Utilizadores() {
       )
       setClientForPin(null)
       setPinForm({ pin: '', confirm: '' })
-      showInfo('PIN da área cliente atualizado.')
+      showSuccess('PIN da área cliente actualizado.')
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Erro ao guardar PIN')
     } finally {
@@ -516,7 +516,7 @@ export default function Utilizadores() {
         )
       )
       setClientToRevoke(null)
-      showInfo('Acesso à área cliente revogado.')
+      showSuccess('Acesso à área cliente revogado.')
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Erro ao revogar')
     } finally {
@@ -620,6 +620,7 @@ export default function Utilizadores() {
         ...alertPayload,
       })
       .then(() => {
+        showSuccess(`Utilizador «${form.nome.trim()}» criado com sucesso.`)
         closeModal()
         load()
       })
@@ -647,6 +648,7 @@ export default function Utilizadores() {
         ...alertPayload,
       })
       .then(() => {
+        showSuccess(`Utilizador «${form.nome.trim()}» actualizado.`)
         closeModal()
         load()
       })
@@ -666,7 +668,7 @@ export default function Utilizadores() {
       await api.patch(`/api/users/${userForAlerts.id}`, alertPayload)
       setUserForAlerts(null)
       load()
-      showInfo('Preferências de alerta actualizadas.')
+      showSuccess('Preferências de alerta actualizadas.')
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Erro ao guardar alertas')
     } finally {
@@ -680,6 +682,7 @@ export default function Utilizadores() {
     setError(null)
     try {
       await api.delete(`/api/users/${userToDelete.id}`)
+      showSuccess(`Utilizador «${userToDelete.nome}» eliminado.`)
       setUserToDelete(null)
       load()
     } catch (e) {
@@ -695,6 +698,7 @@ export default function Utilizadores() {
     setError(null)
     try {
       await api.post(`/api/users/${userToSuspender.id}/suspender`, {})
+      showSuccess(`Utilizador «${userToSuspender.nome}» suspenso.`)
       setUserToSuspender(null)
       load()
     } catch (e) {
@@ -710,6 +714,7 @@ export default function Utilizadores() {
     setError(null)
     try {
       await api.post(`/api/users/${userToAtivar.id}/ativar`, {})
+      showSuccess(`Utilizador «${userToAtivar.nome}» activado.`)
       setUserToAtivar(null)
       load()
     } catch (e) {
@@ -739,6 +744,7 @@ export default function Utilizadores() {
     setError(null)
     try {
       await api.patch(`/api/users/${userToResetPassword.id}`, { password: pwd })
+      showSuccess(`Senha de «${userToResetPassword.nome}» redefinida.`)
       setUserToResetPassword(null)
       setResetPasswordForm({ password: '', confirm: '' })
       load()

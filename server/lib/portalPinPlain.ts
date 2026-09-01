@@ -1,14 +1,12 @@
 import { prisma } from './prisma.js'
 import { decryptField, encryptField } from './fieldCrypto.js'
+import { ensureClientTableColumns } from './clientSchema.js'
 
 let portalPinPlainColumnReady = false
 
 export async function ensurePortalPinPlainColumn(): Promise<void> {
   if (portalPinPlainColumnReady) return
-  await prisma.$executeRawUnsafe(`
-    ALTER TABLE clients
-    ADD COLUMN IF NOT EXISTS portal_pin_plain TEXT
-  `)
+  await ensureClientTableColumns()
   portalPinPlainColumnReady = true
 }
 
@@ -37,14 +35,14 @@ export async function getPortalPinPlainMap(ids: number[]): Promise<Map<number, s
   try {
     await ensurePortalPinPlainColumn()
   } catch {
-    // coluna inacessível
+    return map
   }
-  const rows = await prisma.$queryRawUnsafe<Array<{ id: number; portal_pin_plain: string | null }>>(
-    `SELECT id, portal_pin_plain FROM clients WHERE id IN (${clean.join(',')})`
-  )
+  const rows = await prisma.client.findMany({
+    where: { id: { in: clean } },
+    select: { id: true, portalPinPlain: true },
+  })
   for (const r of rows) {
-    const id = Number(r.id)
-    map.set(id, decryptField(r.portal_pin_plain))
+    map.set(r.id, decryptField(r.portalPinPlain))
   }
   return map
 }

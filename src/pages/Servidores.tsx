@@ -28,7 +28,7 @@ interface Servidor {
 }
 
 export default function Servidores() {
-  const { showError, showWarning } = useAlert()
+  const { showError, showWarning, showSuccess } = useAlert()
   const [list, setList] = useState<Servidor[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<'new' | 'edit' | null>(null)
@@ -102,8 +102,10 @@ export default function Servidores() {
       }
       if (modal === 'new') {
         await api.post('/api/servidores', payload)
+        showSuccess(`Servidor «${nome}» criado com sucesso.`)
       } else if (form.id) {
         await api.patch(`/api/servidores/${form.id}`, payload)
+        showSuccess(`Servidor «${nome}» actualizado.`)
       }
       setModal(null)
       setForm({ nome: '', tipo: 'principal', status: 'online', servidorId: null, mensalidade: null, dataPagamento: null })
@@ -117,6 +119,7 @@ export default function Servidores() {
     if (!servidorToDelete) return
     try {
       await api.delete(`/api/servidores/${servidorToDelete.id}`)
+      showSuccess(`Servidor «${servidorToDelete.nome}» eliminado.`)
       setServidorToDelete(null)
       load()
     } catch (e) {
@@ -128,6 +131,7 @@ export default function Servidores() {
     if (!servidorToSuspender) return
     try {
       await api.post(`/api/servidores/${servidorToSuspender.id}/suspender`, {})
+      showSuccess(`Servidor «${servidorToSuspender.nome}» suspenso.`)
       setServidorToSuspender(null)
       load()
     } catch (e) {
@@ -144,6 +148,7 @@ export default function Servidores() {
     const meses = Math.min(24, Math.max(1, renovarMeses))
     try {
       await api.post(`/api/servidores/${servidorToRenovar.id}/pagar-mes-principal`, { meses })
+      showSuccess(`Pagamento de ${meses} mês(es) registado: «${servidorToRenovar.nome}».`)
       setServidorToRenovar(null)
       setRenovarMeses('')
       load()

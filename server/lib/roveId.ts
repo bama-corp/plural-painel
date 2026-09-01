@@ -1,18 +1,11 @@
 import { prisma } from './prisma.js'
+import { ensureClientTableColumns } from './clientSchema.js'
 
 let roveIdSchemaReady = false
 
 export async function ensureRoveIdColumn(): Promise<void> {
   if (roveIdSchemaReady) return
-  await prisma.$executeRawUnsafe(`
-    ALTER TABLE clients
-    ADD COLUMN IF NOT EXISTS rove_id TEXT
-  `)
-  await prisma.$executeRawUnsafe(`
-    CREATE UNIQUE INDEX IF NOT EXISTS clients_rove_id_unique_idx
-    ON clients (rove_id)
-    WHERE rove_id IS NOT NULL
-  `)
+  await ensureClientTableColumns()
   roveIdSchemaReady = true
 }
 
@@ -27,35 +20,42 @@ export async function getRoveIdsMap(clientIds: number[]): Promise<Map<number, st
   const clean = [...new Set(clientIds.map((i) => Number(i)).filter((i) => Number.isFinite(i) && i > 0))]
   if (clean.length === 0) return map
   await ensureRoveIdColumn().catch(() => {})
-  const rows = await prisma.$queryRawUnsafe<Array<{ id: number; rove_id: string | null }>>(
-    `SELECT id, rove_id FROM clients WHERE id = ANY($1::int[])`,
-    clean
-  )
+  const rows = await prisma.client.findMany({
+    where: { id: { in: clean } },
+    select: { id: true, roveId: true },
+  })
   for (const r of rows) {
-    map.set(Number(r.id), r.rove_id ?? null)
+    map.set(r.id, r.roveId ?? null)
   }
   return map
 }
 
 async function assignRoveId(clientId: number): Promise<string> {
+  await ensureRoveIdColumn().catch(() => {})
   for (let i = 0; i < 30; i++) {
     const candidate = buildRoveIdCandidate()
-    const used = await prisma.$queryRawUnsafe<Array<{ id: number }>>(
-      'SELECT id FROM clients WHERE rove_id = $1 LIMIT 1',
-      candidate
-    )
-    if (used.length > 0) continue
-    await prisma.$executeRawUnsafe(
-      'UPDATE clients SET rove_id = $1 WHERE id = $2 AND rove_id IS NULL',
-      candidate,
-      clientId
-    )
-    const rows = await prisma.$queryRawUnsafe<Array<{ rove_id: string | null }>>(
-      'SELECT rove_id FROM clients WHERE id = $1 LIMIT 1',
-      clientId
-    )
-    const assigned = rows[0]?.rove_id
-    if (assigned) return assigned
+    const used = await prisma.client.findFirst({
+      where: { roveId: candidate },
+      select: { id: true },
+    })
+    if (used) continue
+    try {
+      const updated = await prisma.client.updateMany({
+        where: { id: clientId, roveId: null },
+        data: { roveId: candidate },
+      })
+      if (updated.count === 0) {
+        const existing = await prisma.client.findUnique({
+          where: { id: clientId },
+          select: { roveId: true },
+        })
+        if (existing?.roveId) return existing.roveId
+        continue
+      }
+      return candidate
+    } catch {
+      continue
+    }
   }
   throw new Error('Não foi possível gerar ID ROVE único')
 }

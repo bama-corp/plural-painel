@@ -35,7 +35,7 @@ export function FinanceiroCustos({
   onReloadServidores: () => Promise<void>
   onReloadDashboard?: () => Promise<void>
 }) {
-  const { showError, showInfo } = useAlert()
+  const { showError, showSuccess } = useAlert()
   const { user } = useAuth()
   const canSuspendServidor = user?.role !== 'financeiro'
   const [servidorGestaoPage, setServidorGestaoPage] = useState(1)
@@ -57,7 +57,7 @@ export function FinanceiroCustos({
     setSubmitting(true)
     try {
       await api.post(`/api/salas/${salaToPagar.id}/pagar-mes`, {})
-      showInfo(`Sala "${salaToPagar.nome}" renovada por +1 mês.`)
+      showSuccess(`Sala «${salaToPagar.nome}» renovada por +1 mês.`)
       setSalaToPagar(null)
       await onReloadSalas()
       await onReloadDashboard?.()
@@ -73,7 +73,7 @@ export function FinanceiroCustos({
     setSubmitting(true)
     try {
       await api.post(`/api/servidores/${servidorUmMes.id}/pagar-mes-principal`, { meses: 1 })
-      showInfo(`Pagamento de 1 mês registado: "${servidorUmMes.nome}".`)
+      showSuccess(`Pagamento de 1 mês registado: «${servidorUmMes.nome}».`)
       setServidorUmMes(null)
       await onReloadServidores()
       await onReloadDashboard?.()
@@ -90,7 +90,7 @@ export function FinanceiroCustos({
     try {
       await api.post(`/api/servidores/${servidorSuspender.id}/suspender`, {})
       await Promise.all([onReloadServidores(), onReloadDashboard?.()])
-      showInfo(`Servidor "${servidorSuspender.nome}" suspenso.`)
+      showSuccess(`Servidor «${servidorSuspender.nome}» suspenso.`)
       setServidorSuspender(null)
     } catch (e) {
       showError(e instanceof Error ? e.message : 'Erro ao suspender servidor')
@@ -105,7 +105,7 @@ export function FinanceiroCustos({
     setSubmitting(true)
     try {
       await api.post(`/api/servidores/${servidorToRenovar.id}/pagar-mes-principal`, { meses })
-      showInfo(`Pagamento do servidor "${servidorToRenovar.nome}" registado (+${meses} mês(es)).`)
+      showSuccess(`Pagamento do servidor «${servidorToRenovar.nome}» registado (+${meses} mês(es)).`)
       setServidorToRenovar(null)
       setRenovarMeses('')
       await onReloadServidores()

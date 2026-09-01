@@ -30,7 +30,7 @@ interface Revendedor {
 }
 
 export default function Revendedores() {
-  const { showError, showWarning } = useAlert()
+  const { showError, showWarning, showSuccess } = useAlert()
   const [list, setList] = useState<Revendedor[]>([])
   const [servidores, setServidores] = useState<Servidor[]>([])
   const [loading, setLoading] = useState(true)
@@ -114,6 +114,7 @@ export default function Revendedores() {
           servidorId: form.servidorId || null,
           observacoes: form.observacoes || null,
         })
+        showSuccess(`Revendedor «${nome}» criado com sucesso.`)
       } else if (form.id) {
         await api.patch(`/api/revendedores/${form.id}`, {
           nome,
@@ -122,6 +123,7 @@ export default function Revendedores() {
           observacoes: form.observacoes ?? null,
           status: form.status ?? 'ativo',
         })
+        showSuccess(`Revendedor «${nome}» actualizado.`)
       }
       setModal(null)
       setForm({ nome: '', contacto: emptyWhatsapp(), servidorId: null, observacoes: '' })
@@ -135,6 +137,7 @@ export default function Revendedores() {
     if (!revendedorSuspender) return
     try {
       await api.post(`/api/revendedores/${revendedorSuspender.id}/suspender`, {})
+      showSuccess(`Revendedor «${revendedorSuspender.nome}» suspenso.`)
       setRevendedorSuspender(null)
       load()
     } catch (e) {
@@ -146,6 +149,7 @@ export default function Revendedores() {
     if (!revendedorAtivar) return
     try {
       await api.post(`/api/revendedores/${revendedorAtivar.id}/ativar`, {})
+      showSuccess(`Revendedor «${revendedorAtivar.nome}» activado.`)
       setRevendedorAtivar(null)
       load()
     } catch (e) {
@@ -157,6 +161,7 @@ export default function Revendedores() {
     if (!revendedorToDelete) return
     try {
       await api.delete(`/api/revendedores/${revendedorToDelete.id}`)
+      showSuccess(`Revendedor «${revendedorToDelete.nome}» eliminado.`)
       setRevendedorToDelete(null)
       load()
     } catch (e) {

@@ -11,7 +11,7 @@ import { inscricaoValorPlano } from '../../lib/planos'
 import type { ClienteFinanceiro } from './types'
 
 export function FinanceiroInscricoes({ onChanged }: { onChanged?: () => void }) {
-  const { showError, showInfo } = useAlert()
+  const { showError, showSuccess } = useAlert()
   const [clients, setClients] = useState<ClienteFinanceiro[]>([])
   const [loading, setLoading] = useState(true)
   const [tablePage, setTablePage] = useState(1)
@@ -49,7 +49,7 @@ export function FinanceiroInscricoes({ onChanged }: { onChanged?: () => void }) 
     setSubmitting(true)
     try {
       await api.patch(`/api/clients/${clientInscricao.id}`, { inscricaoPaga: true })
-      showInfo(`Inscrição marcada como paga: "${clientInscricao.nome}".`)
+      showSuccess(`Inscrição marcada como paga: «${clientInscricao.nome}».`)
       setClientInscricao(null)
       await load()
       onChanged?.()
