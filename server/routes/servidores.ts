@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
-import { authMiddleware, canAccessServidores, canManageServidores } from '../middleware/auth.js'
+import { authMiddleware, canAccessServidores, canManageServidores, canEditServidorCustos } from '../middleware/auth.js'
 import type { AuthPayload } from '../middleware/auth.js'
 import { auditLog } from '../middleware/audit.js'
 import { templates } from '../services/whatsapp.js'
@@ -114,20 +114,35 @@ router.post('/', auditLog('create_servidor', 'servidor'), async (req, res) => {
 
 router.patch('/:id', auditLog('update_servidor', 'servidor'), async (req, res) => {
   const user = (req as unknown as { user: AuthPayload }).user
-  if (!canManageServidores(user.role)) return res.status(403).json({ error: 'Sem permissão para editar servidores' })
   const id = Number(req.params.id)
   const existing = await prisma.servidor.findUnique({ where: { id } })
   if (!existing) return res.status(404).json({ error: 'Servidor não encontrado' })
   const { nome, tipo, status, servidorId, mensalidade, dataPagamento } = req.body
+  const wantsGestao = nome != null || tipo != null || status != null || servidorId != null
+  const wantsCustos = mensalidade !== undefined || dataPagamento !== undefined
+  if (wantsGestao && !canManageServidores(user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para editar servidores' })
+  }
+  if (wantsCustos && !canEditServidorCustos(user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para editar custos do servidor' })
+  }
+  if (!wantsGestao && !wantsCustos) {
+    return res.status(400).json({ error: 'Nada para atualizar' })
+  }
   await ensureServidorPagamentoColumns().catch(() => {})
   const update: Record<string, unknown> = {}
-  if (nome != null) update.nome = nome
-  if (tipo != null) update.tipo = tipo
-  if (status != null) update.status = status
-  if (tipo === 'secundario' && servidorId != null) update.servidorId = Number(servidorId)
-  else if (tipo !== 'secundario') update.servidorId = null
-  const servidor = await prisma.servidor.update({ where: { id }, data: update })
-  if (mensalidade !== undefined || dataPagamento !== undefined) {
+  if (canManageServidores(user.role)) {
+    if (nome != null) update.nome = nome
+    if (tipo != null) update.tipo = tipo
+    if (status != null) update.status = status
+    if (tipo === 'secundario' && servidorId != null) update.servidorId = Number(servidorId)
+    else if (tipo != null && tipo !== 'secundario') update.servidorId = null
+  }
+  const servidor =
+    Object.keys(update).length > 0
+      ? await prisma.servidor.update({ where: { id }, data: update })
+      : existing
+  if (wantsCustos && canEditServidorCustos(user.role)) {
     await prisma.$executeRawUnsafe(
       'UPDATE servidores SET mensalidade = $1, data_pagamento = $2 WHERE id = $3',
       mensalidade != null && mensalidade !== '' ? Number(mensalidade) : null,

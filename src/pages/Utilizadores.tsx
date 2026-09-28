@@ -193,10 +193,10 @@ function AlertScopesEditor({
         {!compactHeader && (
           <div>
             <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
-              Alertas WhatsApp
+              Alertas ntfy
             </p>
             <p className="mt-0.5 text-[10px] text-gray-600">
-              Notificações que este operador recebe no WhatsApp.
+              Categorias de referência. Os alertas do painel vão para o tópico ntfy da equipa.
             </p>
           </div>
         )}
@@ -604,7 +604,7 @@ export default function Utilizadores() {
     if (!validateWhatsappOptional(form.whatsapp)) return
     const alertPayload = buildAlertPayload(form.alerts, true)
     if (alertPayload === null) {
-      showWarning('Seleccione pelo menos uma categoria de alerta WhatsApp.')
+      showWarning('Seleccione pelo menos uma categoria de alerta.')
       return
     }
     setSubmitLoading(true)
@@ -634,7 +634,7 @@ export default function Utilizadores() {
     if (!validateWhatsappOptional(form.whatsapp)) return
     const alertPayload = buildAlertPayload(form.alerts)
     if (alertPayload === null) {
-      showWarning('Seleccione pelo menos uma categoria de alerta WhatsApp.')
+      showWarning('Seleccione pelo menos uma categoria de alerta.')
       return
     }
     setSubmitLoading(true)
@@ -660,7 +660,7 @@ export default function Utilizadores() {
     if (!userForAlerts) return
     const alertPayload = buildAlertPayload(alertsForm)
     if (alertPayload === null) {
-      showWarning('Seleccione pelo menos uma categoria de alerta WhatsApp.')
+      showWarning('Seleccione pelo menos uma categoria de alerta.')
       return
     }
     setSubmitLoading(true)
@@ -1037,7 +1037,7 @@ export default function Utilizadores() {
                           type="button"
                           onClick={() => openAlertsModal(u)}
                           className="text-left text-xs text-gray-300 hover:text-primary-300 transition-colors"
-                          title="Configurar alertas WhatsApp"
+                          title="Configurar alertas ntfy"
                         >
                           {formatAlertScopesSummary(u.alertScopes, u.role)}
                           {u.alertScopes?.length ? (
@@ -1056,7 +1056,7 @@ export default function Utilizadores() {
                           <button
                             type="button"
                             onClick={() => openAlertsModal(u)}
-                            title="Alertas WhatsApp"
+                            title="Alertas ntfy"
                             className="inline-flex items-center justify-center h-8 px-3 rounded-md border border-violet-500/50 bg-violet-500/10 text-violet-300 hover:bg-violet-500/30 hover:text-white shadow-sm shadow-violet-900/40 transition-colors"
                           >
                             <Bell className="w-4 h-4" />
@@ -1588,7 +1588,7 @@ export default function Utilizadores() {
                   <Bell className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold text-white">Alertas WhatsApp</h3>
+                  <h3 className="text-lg font-semibold text-white">Alertas ntfy</h3>
                   <p className="text-xs text-gray-500 mt-0.5">{userForAlerts.nome}</p>
                 </div>
               </div>
@@ -1680,7 +1680,7 @@ export default function Utilizadores() {
                       onChange={(whatsapp) => setForm((f) => ({ ...f, whatsapp }))}
                     />
                     <p className="mt-1 text-[10px] text-gray-600">
-                      Necessário para receber alertas no telemóvel.
+                      Necessário para contacto / área do cliente (não para alertas do painel).
                     </p>
                   </div>
 
@@ -1735,14 +1735,14 @@ export default function Utilizadores() {
                   )}
                 </div>
 
-                {/* Card 2 — alertas WhatsApp */}
+                {/* Card 2 — alertas ntfy */}
                 <div className="space-y-3 self-start rounded-md bg-netflix-card p-4 plural-edge">
                   <div>
                     <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
-                      Alertas WhatsApp
+                      Alertas ntfy
                     </p>
                     <p className="mt-0.5 text-[10px] text-gray-600">
-                      Notificações que este operador recebe no telemóvel.
+                      Categorias de referência. Envio real: tópico ntfy da equipa.
                     </p>
                   </div>
                   <AlertScopesEditor

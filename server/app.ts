@@ -17,6 +17,7 @@ import cronRoutes from './routes/cron.js'
 import usersRoutes from './routes/users.js'
 import clientPortalRoutes from './routes/client-portal.js'
 import whatsappRoutes from './routes/whatsapp.js'
+import suporteRoutes from './routes/suporte.js'
 import phRoutes from './routes/ph.js'
 
 const app = express()
@@ -45,6 +46,7 @@ app.use('/api/cron', cronRoutes)
 app.use('/api/users', usersRoutes)
 app.use('/api/client-portal', clientPortalRoutes)
 app.use('/api/whatsapp', whatsappRoutes)
+app.use('/api/suporte', suporteRoutes)
 app.use('/api/ph', phRoutes)
 
 app.get('/api/health', async (_req, res) => {
@@ -65,6 +67,12 @@ app.use('/api', (_req, res) => {
 app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[API] Erro:', err)
   const message = err instanceof Error ? err.message : 'Erro interno'
+  if (message.includes('FIELD_ENCRYPTION_KEY')) {
+    return res.status(503).json({
+      error:
+        'FIELD_ENCRYPTION_KEY em falta no ambiente. Define a variável no Vercel (Production/Preview) e volta a fazer deploy.',
+    })
+  }
   const isProd = process.env.NODE_ENV === 'production'
   if (isProd) {
     res.status(500).json({ error: 'Internal Server Error' })

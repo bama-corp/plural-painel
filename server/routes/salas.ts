@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
-import { authMiddleware, canAccessSalas, canManageSalas } from '../middleware/auth.js'
+import { authMiddleware, canAccessSalas, canManageSalas, canEditSalaCustos } from '../middleware/auth.js'
 import type { AuthPayload } from '../middleware/auth.js'
 import { auditLog } from '../middleware/audit.js'
 import { templates } from '../services/whatsapp.js'
@@ -76,19 +76,31 @@ router.post('/', auditLog('create_sala', 'sala'), async (req, res) => {
   if (!canManageSalas(user.role)) return res.status(403).json({ error: 'Sem permissão para criar salas' })
   const { nome, email, senha, observacoes, dataFim } = req.body
   if (!nome || String(nome).trim() === '') return res.status(400).json({ error: 'Nome da sala é obrigatório' })
-  await ensureSalaStatusColumn()
-  const sala = await prisma.sala.create({
-    data: {
-      nome: String(nome).trim(),
-      email: email != null && String(email).trim() !== '' ? String(email).trim() : null,
-      senha: senha != null && String(senha) !== '' ? encryptField(String(senha)) : null,
-      observacoes: observacoes != null ? String(observacoes).trim() || null : null,
-      dataFim: dataFim ? new Date(dataFim) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    },
-  })
-  const withStatus = await prisma.$queryRawUnsafe<Array<{ status: string }>>('SELECT status FROM salas WHERE id = $1', sala.id).then((r) => r[0])
-  void notifyPanelUsers('salas', `Nova sala Netflix: "${sala.nome}" — renovação ${formatDateBr(sala.dataFim ?? new Date())}.`)
-  res.status(201).json({ ...withDecryptedSenha(sala), status: withStatus?.status ?? 'ativo' })
+  try {
+    await ensureSalaStatusColumn()
+    const sala = await prisma.sala.create({
+      data: {
+        nome: String(nome).trim(),
+        email: email != null && String(email).trim() !== '' ? String(email).trim() : null,
+        senha: senha != null && String(senha) !== '' ? encryptField(String(senha)) : null,
+        observacoes: observacoes != null ? String(observacoes).trim() || null : null,
+        dataFim: dataFim ? new Date(dataFim) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      },
+    })
+    const withStatus = await prisma.$queryRawUnsafe<Array<{ status: string }>>('SELECT status FROM salas WHERE id = $1', sala.id).then((r) => r[0])
+    void notifyPanelUsers('salas', `Nova sala Netflix: "${sala.nome}" — renovação ${formatDateBr(sala.dataFim ?? new Date())}.`)
+    res.status(201).json({ ...withDecryptedSenha(sala), status: withStatus?.status ?? 'ativo' })
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Erro ao criar sala'
+    if (message.includes('FIELD_ENCRYPTION_KEY')) {
+      return res.status(503).json({
+        error:
+          'FIELD_ENCRYPTION_KEY em falta no ambiente. Define a variável no Vercel (Production/Preview) e volta a fazer deploy.',
+      })
+    }
+    console.error('[salas] create:', e)
+    res.status(500).json({ error: message })
+  }
 })
 
 // Rotas com path específico antes de /:id para não serem capturadas por outras
@@ -168,18 +180,12 @@ router.post('/:id/pagar-mes', auditLog('pay_sala_month', 'sala'), async (req, re
   const existing = await prisma.sala.findUnique({ where: { id } })
   if (!existing) return res.status(404).json({ error: 'Sala não encontrada' })
 
-  // Regra do negócio: pagamento de sala soma sempre 1 mês à data fim da própria sala,
-  // mantendo o mesmo dia de cobrança em todos os meses.
+  // Pagamento da conta Netflix da sala (+1 mês). Datas de renovação dos clientes são independentes.
   const baseDate = existing.dataFim ?? new Date()
   const nextMonth = addMonthsKeepingBillingDay(baseDate, 1)
 
   const sala = await prisma.sala.update({
     where: { id },
-    data: { dataFim: nextMonth },
-  })
-
-  await prisma.client.updateMany({
-    where: { salaId: id },
     data: { dataFim: nextMonth },
   })
 
@@ -204,7 +210,7 @@ router.post('/:id/pagar-mes', auditLog('pay_sala_month', 'sala'), async (req, re
   void notifySalaClients(id, (nome) => templates.salaContaRenovada(nome, sala.nome, fimStr))
   void notifyPanelUsers(
     'salas',
-    `Conta Netflix renovada: sala "${sala.nome}" — ${totalClientes} cliente(s) — próxima renovação ${fimStr}.`
+    `Conta Netflix renovada: sala "${sala.nome}" — ${totalClientes} cliente(s) — próxima renovação da conta ${fimStr}.`
   )
 
   res.json({ ...stripSalaSenha(sala), status: statusVal, totalClientes })
@@ -240,26 +246,41 @@ router.get('/:id', async (req, res) => {
 
 router.patch('/:id', auditLog('update_sala', 'sala'), async (req, res) => {
   const user = (req as unknown as { user: AuthPayload }).user
-  if (!canManageSalas(user.role)) return res.status(403).json({ error: 'Sem permissão para editar salas' })
   const id = Number(req.params.id)
   const existing = await prisma.sala.findUnique({ where: { id } })
   if (!existing) return res.status(404).json({ error: 'Sala não encontrada' })
   const { nome, email, senha, observacoes, dataFim, status } = req.body
-  const update: Record<string, unknown> = {}
-  if (nome != null) update.nome = String(nome).trim()
-  if (email !== undefined) update.email = email != null && String(email).trim() !== '' ? String(email).trim() : null
-  if (senha !== undefined) {
-    update.senha = senha != null && String(senha) !== '' ? encryptField(String(senha)) : null
+  const wantsGestao =
+    nome != null || email !== undefined || senha !== undefined || observacoes !== undefined || status != null
+  const wantsCustos = dataFim !== undefined
+  if (wantsGestao && !canManageSalas(user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para editar salas' })
   }
-  if (observacoes !== undefined) update.observacoes = observacoes != null && String(observacoes).trim() !== '' ? String(observacoes).trim() : null
-  if (dataFim !== undefined) update.dataFim = dataFim ? new Date(dataFim) : null
-  if (Object.keys(update).length > 0) {
-    const sala = await prisma.sala.update({ where: { id }, data: update })
-    if (sala.dataFim != null) {
-      await prisma.client.updateMany({ where: { salaId: id }, data: { dataFim: sala.dataFim } })
+  if (wantsCustos && !canEditSalaCustos(user.role)) {
+    return res.status(403).json({ error: 'Sem permissão para editar a data de renovação da sala' })
+  }
+  if (!wantsGestao && !wantsCustos) {
+    return res.status(400).json({ error: 'Nada para atualizar' })
+  }
+  const update: Record<string, unknown> = {}
+  if (canManageSalas(user.role)) {
+    if (nome != null) update.nome = String(nome).trim()
+    if (email !== undefined) update.email = email != null && String(email).trim() !== '' ? String(email).trim() : null
+    if (senha !== undefined) {
+      update.senha = senha != null && String(senha) !== '' ? encryptField(String(senha)) : null
+    }
+    if (observacoes !== undefined) {
+      update.observacoes =
+        observacoes != null && String(observacoes).trim() !== '' ? String(observacoes).trim() : null
     }
   }
-  if (status != null) {
+  if (wantsCustos && canEditSalaCustos(user.role)) {
+    update.dataFim = dataFim ? new Date(dataFim) : null
+  }
+  if (Object.keys(update).length > 0) {
+    await prisma.sala.update({ where: { id }, data: update })
+  }
+  if (status != null && canManageSalas(user.role)) {
     await ensureSalaStatusColumn()
     await prisma.$executeRawUnsafe('UPDATE salas SET status = $1 WHERE id = $2', status, id)
   }

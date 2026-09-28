@@ -6,7 +6,7 @@ export const PLANOS_IPTV = [
 ] as const
 
 export const PLANOS_NETFLIX = [
-  { id: 'Plano Room', label: 'Plano Room', valor: 4500, inscricao: 2000 },
+  { id: 'Plano Room', label: 'Plano Room', valor: 5000, inscricao: 2000 },
   { id: 'Plano Solo', label: 'Plano Solo', valor: 18500, inscricao: 4000 },
 ] as const
 

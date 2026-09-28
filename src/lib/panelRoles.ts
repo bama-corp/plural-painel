@@ -11,3 +11,13 @@ export function canAccessFinanceiroPage(role?: string | null): boolean {
 export function isFinanceiroRole(role?: string | null): boolean {
   return role === 'financeiro'
 }
+
+export function canAccessSuportePage(role?: string | null): boolean {
+  return (
+    role === 'admin' ||
+    role === 'geral' ||
+    role === 'suporte' ||
+    role === 'netflix' ||
+    role === 'iptv'
+  )
+}

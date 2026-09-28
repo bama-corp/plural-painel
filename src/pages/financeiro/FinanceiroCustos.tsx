@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { AlertTriangle, LayoutGrid, RefreshCw, Server, Zap } from 'lucide-react'
+import { AlertTriangle, Edit2, LayoutGrid, RefreshCw, Server, Zap } from 'lucide-react'
 import { FinanceiroActionBtn } from './FinanceiroActionBtn'
 import { FinanceiroConfirmModal } from './FinanceiroConfirmModal'
 import { api } from '../../api/client'
 import { useAlert } from '../../contexts/AlertContext'
 import { useAuth } from '../../contexts/AuthContext'
+import { RoveDatePicker } from '../../components/RoveDatePicker'
+import { RoveMensalidadeInput } from '../../components/RoveMensalidadeInput'
 import { RoveSelect } from '../../components/RoveSelect'
 import { TablePagination, ROWS_PER_PAGE } from '../../components/TablePagination'
 import { PluralTableShell } from '../../components/PluralTableShell'
@@ -47,6 +49,13 @@ export function FinanceiroCustos({
   const [servidorSuspender, setServidorSuspender] = useState<ServidorFinanceiro | null>(null)
   const [servidorToRenovar, setServidorToRenovar] = useState<ServidorFinanceiro | null>(null)
   const [renovarMeses, setRenovarMeses] = useState<number | ''>('')
+
+  const [servidorToEdit, setServidorToEdit] = useState<ServidorFinanceiro | null>(null)
+  const [editMensalidade, setEditMensalidade] = useState<number | null>(null)
+  const [editDataPagamento, setEditDataPagamento] = useState('')
+
+  const [salaToEdit, setSalaToEdit] = useState<SalaFinanceira | null>(null)
+  const [editSalaDataFim, setEditSalaDataFim] = useState('')
 
   const canShowNetflix = servicoView === 'todos' || servicoView === 'netflix'
   const canShowIptv = servicoView === 'todos' || servicoView === 'iptv'
@@ -117,6 +126,54 @@ export function FinanceiroCustos({
     }
   }
 
+  function openEditServidor(s: ServidorFinanceiro) {
+    setServidorToEdit(s)
+    setEditMensalidade(s.mensalidade != null ? Number(s.mensalidade) : null)
+    setEditDataPagamento(s.dataPagamento ? String(s.dataPagamento).slice(0, 10) : '')
+  }
+
+  async function confirmarEditServidor() {
+    if (!servidorToEdit) return
+    setSubmitting(true)
+    try {
+      await api.patch(`/api/servidores/${servidorToEdit.id}`, {
+        mensalidade: editMensalidade,
+        dataPagamento: editDataPagamento || null,
+      })
+      showSuccess(`Custos do servidor «${servidorToEdit.nome}» atualizados.`)
+      setServidorToEdit(null)
+      await onReloadServidores()
+      await onReloadDashboard?.()
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Erro ao atualizar servidor')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function openEditSala(s: SalaFinanceira) {
+    setSalaToEdit(s)
+    setEditSalaDataFim(s.dataFim ? String(s.dataFim).slice(0, 10) : '')
+  }
+
+  async function confirmarEditSala() {
+    if (!salaToEdit) return
+    setSubmitting(true)
+    try {
+      await api.patch(`/api/salas/${salaToEdit.id}`, {
+        dataFim: editSalaDataFim || null,
+      })
+      showSuccess(`Data de renovação da sala «${salaToEdit.nome}» atualizada.`)
+      setSalaToEdit(null)
+      await onReloadSalas()
+      await onReloadDashboard?.()
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Erro ao atualizar sala')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {canShowIptv && principais.length > 0 && (
@@ -126,7 +183,9 @@ export function FinanceiroCustos({
               <Server className="w-5 h-5 text-blue-400" />
               Servidores IPTV (custos)
             </h3>
-            <p className="text-sm text-gray-400 mb-4">Mensalidades e datas de pagamento aos fornecedores.</p>
+            <p className="text-sm text-gray-400 mb-4">
+              Mensalidades e datas de pagamento aos fornecedores. Pode editar estes campos directamente.
+            </p>
           </div>
           <table className="plural-table plural-table--cards-md">
               <thead>
@@ -166,6 +225,12 @@ export function FinanceiroCustos({
                       </td>
                       <td className="plural-table-cell-actions py-2 px-3" data-label="Ações">
                         <div className="flex justify-end flex-wrap gap-1.5">
+                          <FinanceiroActionBtn
+                            icon={Edit2}
+                            label="Editar"
+                            variant="blue"
+                            onClick={() => openEditServidor(s)}
+                          />
                           <FinanceiroActionBtn
                             icon={Zap}
                             label="+1 mês"
@@ -211,7 +276,9 @@ export function FinanceiroCustos({
               <LayoutGrid className="w-5 h-5 text-primary-400" />
               Salas Netflix (renovação de contas)
             </h3>
-            <p className="text-sm text-gray-400 mb-4">Renove as contas Netflix por sala (+1 mês).</p>
+            <p className="text-sm text-gray-400 mb-4">
+              Data da conta Netflix (independente da renovação de cada cliente). Pode editar a data ou renovar +1 mês.
+            </p>
           </div>
           <table className="plural-table plural-table--cards-md">
               <thead>
@@ -250,12 +317,20 @@ export function FinanceiroCustos({
                           </span>
                         </td>
                         <td className="plural-table-cell-actions py-2 px-3 text-right" data-label="Ações">
-                          <FinanceiroActionBtn
-                            icon={RefreshCw}
-                            label="+1 mês"
-                            variant="emerald"
-                            onClick={() => setSalaToPagar(s)}
-                          />
+                          <div className="flex justify-end flex-wrap gap-1.5">
+                            <FinanceiroActionBtn
+                              icon={Edit2}
+                              label="Editar"
+                              variant="blue"
+                              onClick={() => openEditSala(s)}
+                            />
+                            <FinanceiroActionBtn
+                              icon={RefreshCw}
+                              label="+1 mês"
+                              variant="emerald"
+                              onClick={() => setSalaToPagar(s)}
+                            />
+                          </div>
                         </td>
                       </tr>
                     )
@@ -270,6 +345,72 @@ export function FinanceiroCustos({
           />
         </PluralTableShell>
       )}
+
+      <FinanceiroConfirmModal
+        open={!!servidorToEdit}
+        onClose={() => !submitting && setServidorToEdit(null)}
+        onConfirm={confirmarEditServidor}
+        icon={Edit2}
+        variant="blue"
+        title="Editar custos do servidor"
+        subtitle={
+          servidorToEdit ? (
+            <>
+              Servidor <span className="text-white font-medium">{servidorToEdit.nome}</span>
+            </>
+          ) : undefined
+        }
+        description="Altere a mensalidade paga ao fornecedor e/ou a próxima data de pagamento."
+        confirmLabel="Guardar"
+        loading={submitting}
+        maxWidth="max-w-sm"
+      >
+        <div className="space-y-3">
+          <div>
+            <RoveFormLabel>Mensalidade (kz)</RoveFormLabel>
+            <RoveMensalidadeInput
+              compact
+              value={editMensalidade}
+              onChange={setEditMensalidade}
+              title="Valor mensal do servidor em kz"
+            />
+          </div>
+          <div>
+            <RoveFormLabel>Data pagamento</RoveFormLabel>
+            <RoveDatePicker
+              compact
+              allowPastDates
+              value={editDataPagamento}
+              onChange={setEditDataPagamento}
+            />
+          </div>
+        </div>
+      </FinanceiroConfirmModal>
+
+      <FinanceiroConfirmModal
+        open={!!salaToEdit}
+        onClose={() => !submitting && setSalaToEdit(null)}
+        onConfirm={confirmarEditSala}
+        icon={Edit2}
+        variant="primary"
+        title="Editar renovação da conta"
+        subtitle={
+          salaToEdit ? (
+            <>
+              Sala <span className="text-white font-medium">{salaToEdit.nome}</span>
+            </>
+          ) : undefined
+        }
+        description="Data de renovação da conta Netflix. Não altera as datas de vencimento dos clientes."
+        confirmLabel="Guardar"
+        loading={submitting}
+        maxWidth="max-w-sm"
+      >
+        <div>
+          <RoveFormLabel>Data renovação da conta</RoveFormLabel>
+          <RoveDatePicker compact allowPastDates value={editSalaDataFim} onChange={setEditSalaDataFim} />
+        </div>
+      </FinanceiroConfirmModal>
 
       <FinanceiroConfirmModal
         open={!!salaToPagar}
@@ -288,7 +429,7 @@ export function FinanceiroCustos({
         description="Adiciona 1 mês à data de renovação da conta Netflix desta sala."
         detail={
           salaToPagar
-            ? `${salaToPagar.totalClientes} cliente(s) na sala terão a data de vencimento sincronizada.`
+            ? `${salaToPagar.totalClientes} cliente(s) na sala — as datas de renovação individuais não são alteradas.`
             : undefined
         }
         confirmLabel="Renovar +1 mês"

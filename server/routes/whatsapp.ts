@@ -1,5 +1,10 @@
 import { Router } from 'express'
-import { authMiddleware, requireAdmin } from '../middleware/auth.js'
+import {
+  authMiddleware,
+  requireAdmin,
+  canAccessSuporte,
+} from '../middleware/auth.js'
+import type { AuthPayload } from '../middleware/auth.js'
 import {
   sendWhatsAppMessageDetailed,
   getBusinessPhone,
@@ -9,7 +14,6 @@ import {
 const router = Router()
 
 router.use(authMiddleware)
-router.use(requireAdmin)
 
 async function fetchWhatsappHealth(apiUrl: string) {
   const controller = new AbortController()
@@ -27,8 +31,12 @@ async function fetchWhatsappHealth(apiUrl: string) {
   }
 }
 
-/** Estado da ligação à API WhatsApp (Railway). */
-router.get('/status', async (_req, res) => {
+/** Estado da ligação à API WhatsApp (Railway). Roles do centro de suporte. */
+router.get('/status', async (req, res) => {
+  const user = (req as unknown as { user: AuthPayload }).user
+  if (!canAccessSuporte(user.role)) {
+    return res.status(403).json({ error: 'Sem permissão' })
+  }
   try {
     const apiUrl = process.env.WHATSAPP_API_URL?.replace(/\/$/, '')
     const token = process.env.WHATSAPP_TOKEN
@@ -73,7 +81,7 @@ router.get('/status', async (_req, res) => {
 })
 
 /** Envia mensagem de teste (admin). Body: { phone?: string } */
-router.post('/test', async (req, res) => {
+router.post('/test', requireAdmin, async (req, res) => {
   try {
     const raw = req.body?.phone != null ? String(req.body.phone) : getBusinessPhone()
     const phone = raw.replace(/\D/g, '')

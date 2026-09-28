@@ -3,21 +3,36 @@ import { prisma } from '../lib/prisma.js'
 
 const router = Router()
 
+export type PhClientStatus = 'ativo' | 'vencido' | 'suspenso' | 'cancelado'
+
 /** Auth only via PH_API_KEY (Bearer), not staff JWT. */
 function requirePhKey(req: Request, res: Response, next: NextFunction) {
   const secret = process.env.PH_API_KEY
   if (!secret) {
-    return res.status(503).json({ error: 'PH API não configurada. Defina PH_API_KEY.' })
+    return res.status(503).json({ error: 'PH API nao configurada. Defina PH_API_KEY.' })
   }
   const auth = req.headers.authorization || ''
   const token = auth.startsWith('Bearer ') ? auth.slice('Bearer '.length) : ''
   if (token !== secret) {
-    return res.status(401).json({ error: 'Não autorizado' })
+    return res.status(401).json({ error: 'Nao autorizado' })
   }
   next()
 }
 
 router.use(requirePhKey)
+
+/**
+ * GET /api/ph/health
+ * Confirma que a chave e a BD respondem (sem dados sensiveis).
+ */
+router.get('/health', async (_req, res) => {
+  await prisma.$queryRawUnsafe('SELECT 1')
+  res.json({
+    ok: true,
+    service: 'ph-api',
+    asOf: new Date().toISOString().slice(0, 10),
+  })
+})
 
 /**
  * GET /api/ph/summary
@@ -32,9 +47,11 @@ router.get('/summary', async (_req, res) => {
     data: { status: 'vencido' },
   })
 
-  const [clients, ativos, salasAtivas, custoServidoresIptv] = await Promise.all([
+  const statuses: PhClientStatus[] = ['ativo', 'vencido', 'suspenso', 'cancelado']
+
+  const [clients, salasAtivas, custoServidoresIptv] = await Promise.all([
     prisma.client.findMany({
-      where: { status: { in: ['ativo', 'vencido', 'cancelado'] } },
+      where: { status: { in: statuses } },
       select: {
         id: true,
         nome: true,
@@ -44,10 +61,6 @@ router.get('/summary', async (_req, res) => {
         status: true,
       },
       orderBy: [{ servico: 'asc' }, { nome: 'asc' }],
-    }),
-    prisma.client.findMany({
-      where: { status: 'ativo' },
-      select: { valor: true, servico: true },
     }),
     prisma.sala.count({ where: { status: 'ativo' } }),
     prisma
@@ -59,43 +72,73 @@ router.get('/summary', async (_req, res) => {
   ])
 
   const round2 = (n: number) => Math.round(n * 100) / 100
-  const mrrNetflix = ativos
-    .filter((c) => String(c.servico).toLowerCase() === 'netflix')
-    .reduce((s, c) => s + Number(c.valor), 0)
-  const mrrIptv = ativos
-    .filter((c) => String(c.servico).toLowerCase() === 'iptv')
-    .reduce((s, c) => s + Number(c.valor), 0)
-  const mrr = mrrNetflix + mrrIptv
+  const isoDate = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
+
+  const mapped = clients.map((c) => ({
+    id: String(c.id),
+    nome: c.nome,
+    servico: String(c.servico).toLowerCase() === 'iptv' ? ('iptv' as const) : ('netflix' as const),
+    valor: Number(c.valor),
+    dataFim: isoDate(c.dataFim),
+    status: normalizeStatus(c.status),
+  }))
+
+  /** MRR estrito: so activos (como no dashboard Plural). */
+  const mrrAtivos = mapped
+    .filter((c) => c.status === 'ativo')
+    .reduce((s, c) => s + c.valor, 0)
+
+  /** MRR alinhado ao PH: activos + vencidos + suspensos (exclui cancelado). */
+  const mrrPainel = mapped
+    .filter((c) => c.status !== 'cancelado')
+    .reduce((s, c) => s + c.valor, 0)
+
+  const mrrNetflix = mapped
+    .filter((c) => c.status === 'ativo' && c.servico === 'netflix')
+    .reduce((s, c) => s + c.valor, 0)
+  const mrrIptv = mapped
+    .filter((c) => c.status === 'ativo' && c.servico === 'iptv')
+    .reduce((s, c) => s + c.valor, 0)
 
   const salaCustoUnit = Number(process.env.SALA_NETFLIX_CUSTO_MENSAL || 0)
   const custoSalas = salasAtivas * salaCustoUnit
-  const lucroEstimado = round2(mrr - Number(custoServidoresIptv || 0) - custoSalas)
+  const custoServidores = Number(custoServidoresIptv || 0)
+  const lucroEstimado = round2(mrrAtivos - custoServidores - custoSalas)
 
-  const isoDate = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
+  const counts = {
+    ativo: mapped.filter((c) => c.status === 'ativo').length,
+    vencido: mapped.filter((c) => c.status === 'vencido').length,
+    suspenso: mapped.filter((c) => c.status === 'suspenso').length,
+    cancelado: mapped.filter((c) => c.status === 'cancelado').length,
+  }
 
   res.json({
     asOf: today.toISOString().slice(0, 10),
-    mrr: round2(mrr),
+    /** Compat: mrr = activos (legado / docs iniciais). */
+    mrr: round2(mrrAtivos),
+    /** Preferir no PH para alinhar alertas e Stat MRR. */
+    mrrPainel: round2(mrrPainel),
     lucroEstimado,
     byServico: {
       netflix: round2(mrrNetflix),
       iptv: round2(mrrIptv),
     },
-    clients: clients.map((c) => ({
-      id: String(c.id),
-      nome: c.nome,
-      servico: String(c.servico).toLowerCase() === 'iptv' ? 'iptv' : 'netflix',
-      valor: Number(c.valor),
-      dataFim: isoDate(c.dataFim),
-      status: normalizeStatus(c.status),
-    })),
+    counts,
+    custos: {
+      servidores: round2(custoServidores),
+      salas: round2(custoSalas),
+      salaUnit: round2(salaCustoUnit),
+      salasAtivas,
+    },
+    clients: mapped,
   })
 })
 
-function normalizeStatus(raw: string): 'ativo' | 'vencido' | 'cancelado' {
+function normalizeStatus(raw: string): PhClientStatus {
   const s = String(raw || '').toLowerCase()
   if (s === 'cancelado') return 'cancelado'
   if (s === 'vencido') return 'vencido'
+  if (s === 'suspenso') return 'suspenso'
   return 'ativo'
 }
 

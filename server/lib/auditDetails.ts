@@ -219,6 +219,17 @@ export async function buildAuditDetails(
       ])
     }
 
+    case 'send_support_message': {
+      const nome = String(res?.nome ?? before?.nome ?? 'Cliente')
+      const excerpt = res?.excerpt != null ? String(res.excerpt) : null
+      const wa = res?.whatsapp != null ? String(res.whatsapp) : null
+      return joinParts([
+        `Suporte → "${nome}"`,
+        wa,
+        excerpt ? `«${excerpt}»` : null,
+      ])
+    }
+
     case 'create_servidor':
       return joinParts([
         res?.nome ? `Servidor "${res.nome}"` : body.nome ? `Servidor "${body.nome}"` : 'Novo servidor',
@@ -289,10 +300,10 @@ export async function buildAuditDetails(
       const nome = String(res?.nome ?? snap?.nome ?? 'Sala')
       const antiga = fmtDate(snap?.dataFim)
       const nova = fmtDate(res?.dataFim)
-      const clientes = res?.totalClientes != null ? `${res.totalClientes} cliente(s) sincronizados` : null
+      const clientes = res?.totalClientes != null ? `${res.totalClientes} cliente(s) na sala` : null
       return joinParts([
         `"${nome}": conta Netflix +1 mês`,
-        antiga !== '—' && nova !== '—' ? `renovação ${antiga} → ${nova}` : null,
+        antiga !== '—' && nova !== '—' ? `renovação conta ${antiga} → ${nova}` : null,
         clientes,
       ])
     }

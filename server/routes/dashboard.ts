@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { authMiddleware, getRoleServicoFilter, canAccessServidores, canAccessSalas } from '../middleware/auth.js'
 import type { AuthPayload } from '../middleware/auth.js'
+import { markExpiredClientsStatus, notifyPendingVencidosWhatsApp } from '../lib/whatsappNotify.js'
 
 const router = Router()
 
@@ -13,11 +14,11 @@ router.get('/', async (req, res) => {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
-  // Atualizar automaticamente para vencido: clientes ativos cuja dataFim já passou
-  await prisma.client.updateMany({
-    where: { status: 'ativo', dataFim: { lt: today } },
-    data: { status: 'vencido' },
+  await markExpiredClientsStatus()
+  void notifyPendingVencidosWhatsApp().catch((e) => {
+    console.error('[dashboard] notifyPendingVencidosWhatsApp:', e)
   })
+
 
   const clientWhereBase = { status: 'ativo' as const }
   const clientWhereNetflix = { ...clientWhereBase, servico: 'netflix' }

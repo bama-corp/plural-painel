@@ -1,6 +1,9 @@
-# WhatsApp API no Railway — alertas Rove+
+# WhatsApp API no Railway — mensagens a clientes (Rove+)
 
-A API em `whatsapp-api/` envia mensagens via WhatsApp Web (`whatsapp-web.js`). O painel (Vercel) chama `POST /send`; o **cron diário** (`/api/cron/alertas`) envia lembretes de renovação e avisos de vencimento.
+A API em `whatsapp-api/` envia mensagens via WhatsApp Web (`whatsapp-web.js`) **aos clientes** (lembretes, vencimento, indicações).  
+Os **alertas internos do painel** (equipa) usam **ntfy** — ver [CONFIG-NTFY.md](./CONFIG-NTFY.md).
+
+O painel (Vercel) chama `POST /send`; o **cron diário** (`/api/cron/alertas`) envia lembretes de renovação e avisos de vencimento aos clientes, e o resumo da equipa via ntfy.
 
 Repositório da API: [BPA-Inovacoes/roveplus-whatsapp-api](https://github.com/BPA-Inovacoes/roveplus-whatsapp-api)
 

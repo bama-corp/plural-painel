@@ -2,67 +2,110 @@ import { prisma } from './prisma.js'
 import {
   sendWhatsAppMessage,
   normalizeClientWhatsappKey,
-  formatAdminMessage,
   templates,
 } from '../services/whatsapp.js'
-import { ensureUserAlertScopesColumn } from './userColumns.js'
 import {
-  type PanelAlertCategory,
-  parseStoredAlertScopes,
-  userReceivesCategories,
-} from './panelAlertPrefs.js'
+  publishNtfy,
+  ntfyTitleForCategories,
+  ntfyTagsForCategories,
+  ntfyPriorityForCategories,
+} from '../services/ntfy.js'
+import type { PanelAlertCategory } from './panelAlertPrefs.js'
 
 export type { PanelAlertCategory } from './panelAlertPrefs.js'
 
 /** @deprecated Usar PanelAlertCategory em notifyPanelUsers */
 export type PanelAlertScope = 'admin' | 'geral' | 'financeiro' | 'netflix' | 'iptv' | 'suporte' | 'all'
 
-/** Envia alerta WhatsApp a operadores com a categoria activa nas preferências. */
+function panelClickUrl(): string | undefined {
+  const base = (
+    process.env.PANEL_PUBLIC_URL ||
+    process.env.ROVE_PUBLIC_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
+    ''
+  ).replace(/\/$/, '')
+  return base || undefined
+}
+
+/**
+ * Alerta interno da equipa via ntfy (tópico partilhado).
+ * Mensagens a clientes continuam no WhatsApp.
+ */
 export async function notifyPanelUsers(
   categories: PanelAlertCategory | PanelAlertCategory[],
   message: string
 ): Promise<void> {
-  await ensureUserAlertScopesColumn().catch(() => {})
-
   const wanted = Array.isArray(categories) ? categories : [categories]
+  const body = message.trim()
+  if (!body) return
 
-  const users = await prisma.user.findMany({
-    where: { whatsapp: { not: null } },
-    select: { id: true, whatsapp: true, role: true },
+  void publishNtfy({
+    title: ntfyTitleForCategories(wanted),
+    message: body,
+    tags: ntfyTagsForCategories(wanted),
+    priority: ntfyPriorityForCategories(wanted),
+    click: panelClickUrl(),
+  }).catch(() => {})
+}
+
+type ClientWhatsappTarget = { id: number; nome: string; whatsapp: string }
+
+/**
+ * Envia WhatsApp de vencimento/suspensão e só marca `whatsappNotificadoVencimentoAt`
+ * se o envio tiver sucesso (permite retry no cron).
+ */
+export async function notifyClientVencimento(
+  client: ClientWhatsappTarget,
+  kind: 'periodo' | 'suspenso' = 'periodo'
+): Promise<boolean> {
+  if (!client.whatsapp?.trim()) return false
+  const msg =
+    kind === 'suspenso' ? templates.servicoSuspenso(client.nome) : templates.periodoVencido(client.nome)
+  const ok = await sendWhatsAppMessage(client.whatsapp, msg)
+  if (ok) {
+    await prisma.client.update({
+      where: { id: client.id },
+      data: { whatsappNotificadoVencimentoAt: new Date() },
+    })
+  }
+  return ok
+}
+
+/**
+ * Marca ativos com data fim passada como vencido e envia WhatsApp (uma vez, até sucesso).
+ * Também tenta de novo clientes já vencidos ainda sem notificação.
+ */
+export async function markExpiredClientsStatus(): Promise<number> {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const r = await prisma.client.updateMany({
+    where: { status: 'ativo', dataFim: { lt: today } },
+    data: { status: 'vencido' },
   })
+  return r.count
+}
 
-  let statusMap: Record<number, string> = {}
-  let alertScopesMap: Record<number, string | null> = {}
-  try {
-    const rows = await prisma.$queryRawUnsafe<
-      Array<{ id: number; status: string; alert_scopes: string | null }>
-    >('SELECT id, status, alert_scopes FROM "User"')
-    for (const r of rows) {
-      statusMap[r.id] = r.status
-      alertScopesMap[r.id] = r.alert_scopes
-    }
-  } catch {
-    try {
-      const rows = await prisma.$queryRawUnsafe<Array<{ id: number; status: string }>>(
-        'SELECT id, status FROM "User"'
-      )
-      statusMap = Object.fromEntries(rows.map((r) => [r.id, r.status]))
-    } catch {
-      /* colunas opcionais */
-    }
+export async function notifyPendingVencidosWhatsApp(): Promise<number> {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const pendentes = await prisma.client.findMany({
+    where: {
+      status: 'vencido',
+      dataFim: { lt: today },
+      whatsappNotificadoVencimentoAt: null,
+    },
+    select: { id: true, nome: true, whatsapp: true },
+  })
+  let sent = 0
+  for (const c of pendentes) {
+    if (await notifyClientVencimento(c, 'periodo')) sent++
   }
+  return sent
+}
 
-  const msg = formatAdminMessage(message)
-  const seen = new Set<string>()
-  for (const u of users) {
-    if (statusMap[u.id] === 'suspenso' || !u.whatsapp) continue
-    const stored = parseStoredAlertScopes(alertScopesMap[u.id])
-    if (!userReceivesCategories(stored, u.role, wanted)) continue
-    const key = normalizeClientWhatsappKey(u.whatsapp)
-    if (seen.has(key)) continue
-    seen.add(key)
-    void sendWhatsAppMessage(u.whatsapp, msg).catch(() => {})
-  }
+export async function syncExpiredClientsAndNotifyWhatsApp(): Promise<number> {
+  await markExpiredClientsStatus()
+  return notifyPendingVencidosWhatsApp()
 }
 
 export async function notifyUniqueClients(

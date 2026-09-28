@@ -170,7 +170,12 @@ export default function Servidores() {
     backup: 'Secundário',
   }
 
-  const principais = list.filter((s) => s.tipo === 'principal' && s.id !== form.id)
+  const principais = list.filter(
+    (s) =>
+      s.tipo === 'principal' &&
+      s.id !== form.id &&
+      (s.status === 'online' || s.id === form.servidorId)
+  )
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">

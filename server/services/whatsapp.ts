@@ -211,9 +211,9 @@ export const templates = {
       `Olá ${nome}! A data de renovação da sua subscrição foi atualizada para ${dataFim}.`
     ),
 
-  salaContaRenovada: (nome: string, salaNome: string, dataFim: string) =>
+  salaContaRenovada: (nome: string, salaNome: string, _dataFimConta: string) =>
     formatClientMessage(
-      `Olá ${nome}! A conta Netflix da sala "${salaNome}" foi renovada. A sua subscrição mantém-se válida até ${dataFim}.`
+      `Olá ${nome}! A conta Netflix da sala "${salaNome}" foi renovada. A data de renovação do seu plano individual não se altera.`
     ),
 
   salaSuspensa: (nome: string, salaNome: string) =>
@@ -221,9 +221,9 @@ export const templates = {
       `Olá ${nome}! A sala Netflix "${salaNome}" foi suspensa temporariamente. O acesso pode estar limitado até regularização.`
     ),
 
-  salaReativada: (nome: string, salaNome: string, dataFim: string) =>
+  salaReativada: (nome: string, salaNome: string, _dataFimConta: string) =>
     formatClientMessage(
-      `Olá ${nome}! A sala Netflix "${salaNome}" foi reativada. Renovação: ${dataFim}.`
+      `Olá ${nome}! A sala Netflix "${salaNome}" foi reativada. A data de renovação do seu plano individual mantém-se.`
     ),
 
   servidorManutencao: (nome: string, servidorNome: string) =>

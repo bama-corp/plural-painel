@@ -63,6 +63,11 @@ export function canManageServidores(role: string): boolean {
   return role === 'admin' || role === 'geral' || role === 'iptv' || role === 'suporte'
 }
 
+/** Editar mensalidade / data pagamento (ex.: aba Custos no Financeiro). */
+export function canEditServidorCustos(role: string): boolean {
+  return canManageServidores(role) || role === 'financeiro'
+}
+
 export function canAccessSalas(role: string): boolean {
   return role === 'admin' || role === 'geral' || role === 'netflix' || role === 'suporte' || role === 'financeiro'
 }
@@ -71,10 +76,20 @@ export function canManageSalas(role: string): boolean {
   return role === 'admin' || role === 'geral' || role === 'netflix' || role === 'suporte'
 }
 
+/** Editar data de renovação da conta Netflix (ex.: aba Custos). */
+export function canEditSalaCustos(role: string): boolean {
+  return canManageSalas(role) || role === 'financeiro'
+}
+
 export function canManageClients(role: string): boolean {
   return role !== 'financeiro'
 }
 
 export function canAccessFinanceiro(role: string): boolean {
   return role === 'admin' || role === 'financeiro'
+}
+
+/** Centro de suporte (envio WhatsApp individual). Sem perfil financeiro. */
+export function canAccessSuporte(role: string): boolean {
+  return role === 'admin' || role === 'geral' || role === 'suporte' || role === 'netflix' || role === 'iptv'
 }

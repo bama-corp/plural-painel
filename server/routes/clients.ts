@@ -5,9 +5,12 @@ import { prisma } from '../lib/prisma.js'
 import { authMiddleware, getRoleServicoFilter, canAccessServico, canManageClients } from '../middleware/auth.js'
 import type { AuthPayload } from '../middleware/auth.js'
 import { auditLog } from '../middleware/audit.js'
-import { sendWhatsAppMessage, templates, normalizeClientWhatsappKey } from '../services/whatsapp.js'
+import { sendWhatsAppMessage, templates } from '../services/whatsapp.js'
 import {
   notifyPanelUsers,
+  notifyClientVencimento,
+  markExpiredClientsStatus,
+  notifyPendingVencidosWhatsApp,
   clientAreaUrl,
   formatDateBr,
   sameCalendarDay,
@@ -20,6 +23,7 @@ import {
 import { ensureClientTableColumns } from '../lib/clientSchema.js'
 import { ensureClientRoveId, ensureRoveIdsForClients } from '../lib/roveId.js'
 import { decryptField, encryptField } from '../lib/fieldCrypto.js'
+import { notifyPhPanel } from '../lib/notifyPh.js'
 
 const router = Router()
 
@@ -95,12 +99,9 @@ router.get('/', async (req, res) => {
     ensurePortalPinPlainColumn().catch(() => {}),
   ])
 
-  // Atualizar automaticamente para vencido: clientes ativos cuja dataFim já passou
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  await prisma.client.updateMany({
-    where: { status: 'ativo', dataFim: { lt: today } },
-    data: { status: 'vencido' },
+  await markExpiredClientsStatus()
+  void notifyPendingVencidosWhatsApp().catch((e) => {
+    console.error('[clients] notifyPendingVencidosWhatsApp:', e)
   })
 
   const where: Prisma.ClientWhereInput = {}
@@ -225,12 +226,9 @@ router.post('/', auditLog('create_client', 'client'), async (req, res) => {
   const body = req.body
   const servico = body.servico || 'iptv'
   if (!canAccessServico(user.role, servico)) return res.status(403).json({ error: 'Sem permissão para criar cliente deste serviço' })
+  // Netflix: dataFim é sempre do cliente (não da sala)
   let dataFim = body.dataFim ? new Date(body.dataFim) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   const salaId = body.salaId != null && body.salaId !== '' ? Number(body.salaId) : null
-  if (servico === 'netflix' && salaId) {
-    const sala = await prisma.sala.findUnique({ where: { id: salaId } })
-    if (sala?.dataFim) dataFim = sala.dataFim
-  }
   let portalPinHash: string | undefined
   if (body.portalPin != null && String(body.portalPin).trim() !== '') {
     if (String(body.portalPin).trim().length < 4) {
@@ -338,12 +336,7 @@ router.patch('/:id', auditLog('update_client', 'client'), async (req, res) => {
   if (body.iptvM3u != null) data.iptvM3u = body.iptvM3u
   if (body.dataInicio != null) data.dataInicio = new Date(body.dataInicio)
   if (body.dataFim != null) {
-    const newDataFim = new Date(body.dataFim)
-    data.dataFim = newDataFim
-    if (existing.salaId && existing.servico === 'netflix') {
-      await prisma.sala.update({ where: { id: existing.salaId }, data: { dataFim: newDataFim } })
-      await prisma.client.updateMany({ where: { salaId: existing.salaId }, data: { dataFim: newDataFim } })
-    }
+    data.dataFim = new Date(body.dataFim)
   }
   if (body.valor != null) data.valor = Number(body.valor)
   if (body.inscricaoPaga !== undefined) data.inscricaoPaga = body.inscricaoPaga === true || body.inscricaoPaga === 'true'
@@ -438,46 +431,29 @@ router.post('/:id/renovar', auditLog('renew_client', 'client'), async (req, res)
   if (client.status === 'vencido') return res.status(400).json({ error: 'Cliente vencido. Use Ativar para reativar.' })
   const { dias, meses, valor } = req.body
   const mesesAdd = Number(meses) || (dias ? Math.max(1, Math.round(Number(dias) / 30)) : 1)
-  let dataFim: Date
-  if (client.salaId && client.servico === 'netflix') {
-    const sala = await prisma.sala.findUnique({ where: { id: client.salaId } })
-    const base = new Date(sala?.dataFim ?? client.dataFim)
-    dataFim = adicionarMesesADataFim(base, mesesAdd)
-    await prisma.sala.update({ where: { id: client.salaId }, data: { dataFim } })
-    await prisma.client.updateMany({
-      where: { salaId: client.salaId },
-      data: { dataFim, status: 'ativo', whatsappNotificadoVencimentoAt: null },
-    })
-  } else {
-    const base = new Date(client.dataFim)
-    dataFim = adicionarMesesADataFim(base, mesesAdd)
-    await prisma.client.update({
-      where: { id },
-      data: {
-        dataFim,
-        valor: valor != null ? Number(valor) : client.valor,
-        status: 'ativo',
-        whatsappNotificadoVencimentoAt: null,
-      },
-    })
-  }
+  const base = new Date(client.dataFim)
+  const dataFim = adicionarMesesADataFim(base, mesesAdd)
+  await prisma.client.update({
+    where: { id },
+    data: {
+      dataFim,
+      valor: valor != null ? Number(valor) : client.valor,
+      status: 'ativo',
+      whatsappNotificadoVencimentoAt: null,
+    },
+  })
   const updated = await prisma.client.findUnique({ where: { id }, include: { sala: true } })
   if (!updated) return res.status(404).json({ error: 'Cliente não encontrado' })
   const fimStr = dataFim.toLocaleDateString('pt-BR')
-  if (client.salaId && client.servico === 'netflix') {
-    const naSala = await prisma.client.findMany({ where: { salaId: client.salaId } })
-    const seen = new Set<string>()
-    for (const c of naSala) {
-      const key = normalizeClientWhatsappKey(c.whatsapp)
-      if (seen.has(key)) continue
-      seen.add(key)
-      const msg = templates.renovado(c.nome, fimStr)
-      void sendWhatsAppMessage(c.whatsapp, msg).catch(() => {})
-    }
-  } else {
-    const msg = templates.renovado(client.nome, fimStr)
-    void sendWhatsAppMessage(client.whatsapp, msg).catch(() => {})
-  }
+  const msg = templates.renovado(client.nome, fimStr)
+  void sendWhatsAppMessage(client.whatsapp, msg).catch(() => {})
+  void notifyPhPanel({
+    event: 'renovar',
+    clientId: id,
+    clientName: updated.nome,
+    amount: Number(updated.valor),
+    servico: String(updated.servico),
+  })
   res.json({
     ...sanitizeClientDetail({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
     areaClienteAtiva: !!updated.portalPinHash,
@@ -503,6 +479,13 @@ router.post('/:id/marcar-pago', auditLog('mark_paid_client', 'client'), async (r
   const fimStr = new Date(updated.dataFim).toLocaleDateString('pt-BR')
   const msgPago = templates.pagamentoRegistado(updated.nome, fimStr)
   void sendWhatsAppMessage(updated.whatsapp, msgPago).catch(() => {})
+  void notifyPhPanel({
+    event: 'marcar-pago',
+    clientId: id,
+    clientName: updated.nome,
+    amount: Number(updated.valor),
+    servico: String(updated.servico),
+  })
   res.json({
     ...sanitizeClientDetail({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
     areaClienteAtiva: !!updated.portalPinHash,
@@ -519,16 +502,24 @@ router.post('/:id/suspender', auditLog('suspend_client', 'client'), async (req, 
   if (existing.status === 'vencido') return res.status(400).json({ error: 'Cliente já está vencido.' })
   const updated = await prisma.client.update({
     where: { id },
-    data: { status: 'vencido', whatsappNotificadoVencimentoAt: new Date() },
+    data: { status: 'vencido', whatsappNotificadoVencimentoAt: null },
   })
-  const msg = templates.servicoSuspenso(updated.nome)
-  void sendWhatsAppMessage(updated.whatsapp, msg).catch((err) => {
+  void notifyClientVencimento(
+    { id: updated.id, nome: updated.nome, whatsapp: updated.whatsapp },
+    'suspenso'
+  ).catch((err) => {
     console.error('[WhatsApp] Falha ao notificar suspensão:', updated.whatsapp, err)
   })
   void notifyPanelUsers(
     updated.servico === 'netflix' ? 'clientes_netflix' : 'clientes_iptv',
     `Cliente suspenso: ${updated.nome} (${updated.whatsapp}).`
   )
+  void notifyPhPanel({
+    event: 'suspender',
+    clientId: id,
+    clientName: updated.nome,
+    servico: String(updated.servico),
+  })
   res.json({
     ...sanitizeClientDetail({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
     areaClienteAtiva: !!updated.portalPinHash,
@@ -562,6 +553,13 @@ router.post('/:id/ativar', auditLog('activate_client', 'client'), async (req, re
     updated.servico === 'netflix' ? 'clientes_netflix' : 'clientes_iptv',
     `Cliente reativado: ${updated.nome} — renovação ${fimStr}.`
   )
+  void notifyPhPanel({
+    event: 'ativar',
+    clientId: id,
+    clientName: updated.nome,
+    amount: Number(updated.valor),
+    servico: String(updated.servico),
+  })
   res.json({
     ...sanitizeClientDetail({ ...updated, valor: Number(updated.valor) } as Record<string, unknown>),
     areaClienteAtiva: !!updated.portalPinHash,

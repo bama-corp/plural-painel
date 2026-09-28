@@ -471,7 +471,7 @@ export default function Salas() {
                 <span className="font-medium text-white">1 mês</span>?
               </p>
               <p className="text-xs text-gray-500">
-                A data fim da sala será prolongada
+                A data de renovação da conta Netflix será prolongada
                 {salaToRenovar.dataFim && (
                   <>
                     {' '}
@@ -482,11 +482,11 @@ export default function Salas() {
                     )
                   </>
                 )}
-                . Os clientes do Plano Room nesta sala terão a mesma data fim atualizada.
+                . As datas de renovação individuais dos clientes não são alteradas.
               </p>
               {salaToRenovar.totalClientes > 0 && (
                 <p className="text-xs text-gray-500">
-                  Clientes afetados:{' '}
+                  Clientes na sala:{' '}
                   <span className="font-medium text-gray-300">{salaToRenovar.totalClientes}</span>
                 </p>
               )}

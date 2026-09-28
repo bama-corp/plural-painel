@@ -6,6 +6,7 @@ export const AUDIT_ACTION_LABELS: Record<string, string> = {
   suspend_client: 'Suspender cliente',
   activate_client: 'Ativar cliente',
   delete_client: 'Eliminar cliente',
+  send_support_message: 'Mensagem de suporte',
   create_servidor: 'Criar servidor',
   update_servidor: 'Atualizar servidor',
   suspend_servidor: 'Suspender servidor',
@@ -52,6 +53,7 @@ export const AUDIT_ACTION_GROUPS: { label: string; actions: string[] }[] = [
       'suspend_client',
       'activate_client',
       'delete_client',
+      'send_support_message',
     ],
   },
   {

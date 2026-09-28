@@ -1,4 +1,4 @@
-/** Categorias de alerta WhatsApp configuráveis por operador. */
+/** Categorias de alerta do painel (ntfy / referência por operador). */
 export const PANEL_ALERT_CATEGORIES = [
   'clientes_netflix',
   'clientes_iptv',

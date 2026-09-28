@@ -42,7 +42,8 @@ Abrir http://localhost:3000 → login: **admin@plural.com** / **admin123**.
 | **Manual** | Guia do utilizador com instruções detalhadas por módulo |
 | **Alertas** | Linhas amarelas (3 dias) e vermelhas (vencido); botão Suspender |
 | **Tabelas** | Coluna Nº com contagem de linhas em todas as tabelas |
-| **WhatsApp** | Mensagens automáticas (cadastro, lembrete 3 dias, vencido, renovado) quando configurado |
+| **WhatsApp** | Mensagens a clientes (cadastro, lembrete, vencido, renovado) quando configurado |
+| **ntfy** | Alertas internos da equipa (salas, clientes, cron, etc.) — ver docs/CONFIG-NTFY.md |
 
 ---
 

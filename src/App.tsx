@@ -13,6 +13,7 @@ import Indicacoes from './pages/Indicacoes'
 import Audit from './pages/Audit'
 import Utilizadores from './pages/Utilizadores'
 import Financeiro from './pages/Financeiro'
+import Suporte from './pages/Suporte'
 import Manual from './pages/Manual'
 import Notificacoes from './pages/Notificacoes'
 import MeuPerfil from './pages/MeuPerfil'
@@ -76,6 +77,7 @@ function App() {
         <Route path="/revendedores" element={<RequirePanelRole allow={['admin', 'geral', 'iptv', 'suporte']}><Revendedores /></RequirePanelRole>} />
         <Route path="/salas" element={<RequirePanelRole allow={['admin', 'geral', 'netflix', 'suporte']}><Salas /></RequirePanelRole>} />
         <Route path="/indicacoes" element={<RequirePanelRole allow={[...STAFF]}><Indicacoes /></RequirePanelRole>} />
+        <Route path="/suporte" element={<RequirePanelRole allow={[...STAFF]}><Suporte /></RequirePanelRole>} />
         <Route path="/utilizadores" element={<RequirePanelRole allow={['admin']}><Utilizadores /></RequirePanelRole>} />
         <Route path="/financeiro" element={<RequirePanelRole allow={['admin', 'financeiro']}><Financeiro /></RequirePanelRole>} />
         <Route path="/notificacoes" element={<Notificacoes />} />

@@ -94,7 +94,7 @@ const SECOES: Secao[] = [
         passos: [
           'Para clientes Netflix Plano Room, clique em "Atribuir sala".',
           'Selecione a sala na lista e clique em "Guardar".',
-          'A data fim do cliente pode ser alinhada à data fim da sala.',
+          'A data fim do cliente é independente da data da sala.',
         ],
       },
       {
@@ -197,14 +197,14 @@ const SECOES: Secao[] = [
     id: 'salas',
     icon: LayoutGrid,
     titulo: 'Salas Netflix',
-    desc: 'Contas (salas) do Plano Room. Atribua clientes Netflix a salas e defina a data fim partilhada.',
+    desc: 'Contas (salas) do Plano Room. Atribua clientes Netflix a salas; a data fim da conta é independente da de cada cliente.',
     detalhes: [
       {
         titulo: 'Criar sala',
         passos: [
           'Clique no botão "+ Nova sala".',
           'Preencha o nome da sala (obrigatório).',
-          'Opcional: email e senha da conta Netflix, data fim e observações.',
+          'Opcional: email e senha da conta Netflix, data fim da conta e observações.',
           'Clique em "Guardar".',
         ],
       },
@@ -212,7 +212,7 @@ const SECOES: Secao[] = [
         titulo: 'Editar sala',
         passos: [
           'Clique no ícone de lápis (Editar) na linha da sala.',
-          'Altere nome, email, senha, data fim ou observações.',
+          'Altere nome, email, senha, data fim da conta ou observações.',
           'Clique em "Guardar".',
         ],
       },

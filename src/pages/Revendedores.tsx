@@ -16,6 +16,7 @@ interface Servidor {
   id: number
   nome: string
   tipo?: string
+  status?: string
 }
 
 interface Revendedor {
@@ -49,6 +50,9 @@ export default function Revendedores() {
   const [search, setSearch] = useState('')
   const [searchDebounced, setSearchDebounced] = useState('')
   const servidoresPrincipais = servidores.filter((s) => (s.tipo || 'principal') === 'principal')
+  const servidoresPrincipaisForm = servidoresPrincipais.filter(
+    (s) => s.status === 'online' || s.status == null || s.id === form.servidorId
+  )
 
   const filteredList = useMemo(() => {
     const q = searchDebounced.trim().toLowerCase()
@@ -580,9 +584,10 @@ export default function Revendedores() {
                       }
                     >
                       <option value="">Selecione o servidor principal</option>
-                      {servidoresPrincipais.map((s) => (
+                      {servidoresPrincipaisForm.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.nome}
+                          {s.status && s.status !== 'online' ? ` (${s.status})` : ''}
                         </option>
                       ))}
                     </RoveSelect>

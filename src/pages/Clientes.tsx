@@ -29,6 +29,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useAlert } from '../contexts/AlertContext'
 import { TablePagination, ROWS_PER_PAGE } from '../components/TablePagination'
 import { PluralTableShell } from '../components/PluralTableShell'
+import { PLANOS_IPTV, PLANOS_NETFLIX } from '../lib/planos'
 
 interface Client {
   id: number
@@ -59,6 +60,7 @@ interface Servidor {
   id: number
   nome: string
   tipo?: string
+  status?: string
   totalClientes: number
   servidor?: { id: number; nome: string } | null
 }
@@ -80,18 +82,6 @@ const statusColors: Record<string, string> = {
   vencido: 'bg-red-900/50 text-red-300',
   cancelado: 'bg-gray-700 text-gray-300',
 }
-
-/** Planos IPTV (só o nome no select; valor = mensalidade) */
-const PLANOS_IPTV = [
-  { id: 'Pacote Premium', label: 'Pacote Premium', valor: 9500 },
-  { id: 'Pacote Ultimate', label: 'Pacote Ultimate', valor: 12500 },
-] as const
-
-/** Planos Netflix (só o nome no select; valor = mensalidade; inscricao = valor da inscrição) */
-const PLANOS_NETFLIX = [
-  { id: 'Plano Room', label: 'Plano Room', valor: 4500, inscricao: 2000 },
-  { id: 'Plano Solo', label: 'Plano Solo', valor: 18500, inscricao: 4000 },
-] as const
 
 function planoPredefinido(servico: 'iptv' | 'netflix'): { plano: string; valor: number } {
   const lista = servico === 'netflix' ? PLANOS_NETFLIX : PLANOS_IPTV
@@ -243,9 +233,46 @@ export default function Clientes() {
     api.get<Sala[]>('/api/salas').then(setSalas).catch(() => setSalas([]))
   }, [operadorIptv])
 
+  /** Deep link: /clientes?id=123 abre o modal de edição. */
+  useEffect(() => {
+    const idParam = new URLSearchParams(window.location.search).get('id')
+    if (!idParam) return
+    const id = Number(idParam)
+    if (!Number.isFinite(id) || id <= 0) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const detail = await api.get<Client>(`/api/clients/${id}`)
+        if (cancelled) return
+        setForm({
+          ...detail,
+          whatsapp: formatWhatsapp(detail.whatsapp || ''),
+          portalPin: '',
+          removerPinPortal: false,
+        })
+        setModal('edit')
+        const url = new URL(window.location.href)
+        url.searchParams.delete('id')
+        window.history.replaceState({}, '', url.pathname + url.search + url.hash)
+      } catch (e) {
+        if (!cancelled) {
+          showError(e instanceof Error ? e.message : 'Cliente do link não encontrado')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const totalTablePages = Math.max(1, Math.ceil(clients.length / ROWS_PER_PAGE))
   const tablePageClamped = Math.min(tablePage, totalTablePages)
   const pagedClientes = clients.slice((tablePageClamped - 1) * ROWS_PER_PAGE, tablePageClamped * ROWS_PER_PAGE)
+
+  /** Nos formulários de add/edit: só servidores online (mantém o atual se já estiver offline). */
+  const servidoresParaForm = servidores.filter(
+    (s) => s.status === 'online' || s.status == null || s.id === form.servidorId
+  )
 
   const showIptvTab = !operadorNetflix
   const showNetflixTab = !operadorIptv
@@ -1386,11 +1413,9 @@ export default function Clientes() {
                             onChange={(e) => {
                               const v = e.target.value
                               const id = v === '' ? null : Number(v)
-                              const sala = id ? salas.find((s) => s.id === id) : null
                               setForm((f) => ({
                                 ...f,
                                 salaId: id,
-                                dataFim: sala?.dataFim ? String(sala.dataFim).slice(0, 10) : f.dataFim,
                               }))
                             }}
                           >
@@ -1426,11 +1451,12 @@ export default function Clientes() {
                           }
                         >
                           <option value="">Selecione o servidor (opcional)</option>
-                          {servidores.map((s) => (
+                          {servidoresParaForm.map((s) => (
                             <option key={s.id} value={s.id}>
                               {s.tipo === 'secundario' && s.servidor
                                 ? `${s.nome} (Secundário → ${s.servidor.nome})`
                                 : s.nome}
+                              {s.status && s.status !== 'online' ? ` (${s.status})` : ''}
                             </option>
                           ))}
                         </RoveSelect>

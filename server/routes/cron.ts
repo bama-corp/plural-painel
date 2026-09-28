@@ -3,6 +3,7 @@ import { prisma } from '../lib/prisma.js'
 import { sendWhatsAppMessage, templates } from '../services/whatsapp.js'
 import {
   notifyPanelUsers,
+  syncExpiredClientsAndNotifyWhatsApp,
   LEMBRETE_DIAS,
   formatDateBr,
 } from '../lib/whatsappNotify.js'
@@ -68,49 +69,10 @@ router.get('/alertas', async (req, res) => {
     in7Days
   ).catch(() => [])
 
-  /** Vencimento automático: WhatsApp + marcar vencido; ou só WhatsApp se o painel já marcou vencido. */
+  /** Vencidos: marcar + WhatsApp no número registado (retry até sucesso). */
   let vencidosAutoSent = 0
   if (!testAdmin) {
-    const aindaAtivos = await prisma.client.findMany({
-      where: {
-        status: 'ativo',
-        dataFim: { lt: today },
-        whatsappNotificadoVencimentoAt: null,
-      },
-      select: { id: true, nome: true, whatsapp: true },
-    })
-    for (const c of aindaAtivos) {
-      const msg = templates.periodoVencido(c.nome)
-      const ok = await sendWhatsAppMessage(c.whatsapp, msg)
-      await prisma.client.update({
-        where: { id: c.id },
-        data: {
-          status: 'vencido',
-          ...(ok ? { whatsappNotificadoVencimentoAt: new Date() } : {}),
-        },
-      })
-      if (ok) vencidosAutoSent++
-    }
-
-    const jaVencidosSemAviso = await prisma.client.findMany({
-      where: {
-        status: 'vencido',
-        dataFim: { lt: today },
-        whatsappNotificadoVencimentoAt: null,
-      },
-      select: { id: true, nome: true, whatsapp: true },
-    })
-    for (const c of jaVencidosSemAviso) {
-      const msg = templates.periodoVencido(c.nome)
-      const ok = await sendWhatsAppMessage(c.whatsapp, msg)
-      if (ok) {
-        await prisma.client.update({
-          where: { id: c.id },
-          data: { whatsappNotificadoVencimentoAt: new Date() },
-        })
-        vencidosAutoSent++
-      }
-    }
+    vencidosAutoSent = await syncExpiredClientsAndNotifyWhatsApp()
   }
 
   const clients = await prisma.client.findMany({
@@ -149,7 +111,7 @@ router.get('/alertas', async (req, res) => {
     indicacoesPendentes > 0
   if (shouldNotifyAdmin) {
     const adminMsg = testAdmin
-      ? 'Teste de alertas do painel (clientes/salas/servidores). Se recebeu esta mensagem, está a funcionar.'
+      ? 'Teste ntfy do painel (clientes/salas/servidores). Se recebeu esta notificação, está a funcionar.'
       : [
           vencidosAutoSent > 0 ? `Clientes notificados (vencimento automático): ${vencidosAutoSent}` : null,
           sent > 0 ? `Lembretes de renovação enviados hoje: ${sent}` : null,

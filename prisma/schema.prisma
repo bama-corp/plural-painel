@@ -65,14 +65,14 @@ model Client {
   @@map("clients")
 }
 
-// Salas Netflix (Plano Room) – contas em que os clientes estão; data fim é da sala (4 usuários partilham)
+// Salas Netflix (Plano Room) – contas em que os clientes estão; data fim da conta ≠ dataFim de cada cliente
 model Sala {
   id          Int       @id @default(autoincrement())
   nome        String    // ex: Sala 1, Conta A
   email       String?   // email da conta Netflix
   senha       String?   // senha da conta Netflix
   observacoes String?
-  dataFim     DateTime? @map("data_fim") // data fim partilhada por todos os clientes da sala
+  dataFim     DateTime? @map("data_fim") // renovação da conta Netflix (independente dos clientes)
   status      String    @default("ativo") // ativo | suspenso
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

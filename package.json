@@ -18,6 +18,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "test:db": "tsx scripts/test-db.ts",
+    "test:ph-api": "tsx scripts/test-ph-api.ts",
     "diagnostico": "tsx scripts/diagnostico.ts",
     "postinstall": "prisma generate"
   },
