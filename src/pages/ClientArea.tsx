@@ -62,6 +62,17 @@ export interface ClientPortalMe {
   iptvPass: string | null
   iptvMac: string | null
   iptvM3u: string | null
+  iptvAccounts?: Array<{
+    id: number
+    label: string | null
+    username: string
+    password: string | null
+    passwordSet: boolean
+    mac: string | null
+    m3u: string | null
+    servidorId: number | null
+    servidor?: { id: number; nome: string; status?: string } | null
+  }>
   inscricaoPaga: boolean | null
   indicacoes: number
   portalFirstLogin: boolean
@@ -431,14 +442,33 @@ function ClientAreaInner() {
   ]
 
   function copyAllIptv() {
-    const lines = [
-      `Utilizador: ${clientMe.perfil || clientMe.iptvUser || '—'}`,
-      clientMe.iptvPass ? `Senha: ${clientMe.iptvPass}` : null,
-      clientMe.iptvMac ? `MAC: ${clientMe.iptvMac}` : null,
-      clientMe.iptvM3u ? `M3U: ${clientMe.iptvM3u}` : null,
-      clientMe.servidor ? `Servidor: ${clientMe.servidor.nome}` : null,
-    ].filter(Boolean)
-    copyText(lines.join('\n'), 'iptv-all')
+    const accounts =
+      clientMe.iptvAccounts && clientMe.iptvAccounts.length > 0
+        ? clientMe.iptvAccounts
+        : [
+            {
+              label: null as string | null,
+              username: clientMe.perfil || clientMe.iptvUser || '',
+              password: clientMe.iptvPass,
+              mac: clientMe.iptvMac,
+              m3u: clientMe.iptvM3u,
+              servidor: clientMe.servidor,
+            },
+          ]
+    const blocks = accounts.map((a, i) => {
+      const title = a.label || (accounts.length > 1 ? `Conta ${i + 1}` : 'IPTV')
+      return [
+        `— ${title} —`,
+        a.username ? `Utilizador: ${a.username}` : null,
+        a.password ? `Senha: ${a.password}` : null,
+        a.mac ? `MAC: ${a.mac}` : null,
+        a.m3u ? `M3U: ${a.m3u}` : null,
+        a.servidor ? `Servidor: ${a.servidor.nome}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n')
+    })
+    copyText(blocks.join('\n\n'), 'iptv-all')
   }
 
   return (
@@ -766,7 +796,11 @@ function ClientAreaInner() {
                       <Tv className="w-6 h-6 text-neutral-500" />
                       <div>
                         <h2 className="text-lg font-semibold ca-fg">IPTV</h2>
-                        <p className="text-xs text-neutral-500">Linha, servidor e lista M3U</p>
+                        <p className="text-xs text-neutral-500">
+                          {(me.iptvAccounts?.length ?? 0) > 1
+                            ? `${me.iptvAccounts!.length} contas — linha, servidor e M3U`
+                            : 'Linha, servidor e lista M3U'}
+                        </p>
                       </div>
                     </div>
                     <button type="button" onClick={copyAllIptv} className={t.btnGhost}>
@@ -774,55 +808,111 @@ function ClientAreaInner() {
                       {copiedField === 'iptv-all' ? 'Copiado!' : 'Copiar tudo'}
                     </button>
                   </div>
-                  {(me.perfil || me.iptvUser) && (
-                    <CopyField
-                      label="Utilizador / linha"
-                      value={me.perfil || me.iptvUser || ''}
-                      fieldId="iptv-user"
-                      copiedField={copiedField}
-                      onCopy={copyText}
-                    />
-                  )}
-                  {me.iptvPass && (
-                    <CopyField
-                      label="Palavra-passe"
-                      value={me.iptvPass}
-                      fieldId="iptv-pass"
-                      copiedField={copiedField}
-                      onCopy={copyText}
-                    />
-                  )}
-                  {!me.iptvPass && me.iptvPassSet && (
-                    <InfoRow label="Palavra-passe">Definida — contacte a plural se precisar</InfoRow>
-                  )}
-                  {me.iptvMac && (
-                    <CopyField
-                      label="MAC"
-                      value={me.iptvMac}
-                      fieldId="iptv-mac"
-                      copiedField={copiedField}
-                      onCopy={copyText}
-                    />
-                  )}
-                  {me.iptvM3u && (
-                    <CopyField
-                      label="Lista M3U"
-                      value={me.iptvM3u}
-                      fieldId="iptv-m3u"
-                      copiedField={copiedField}
-                      onCopy={copyText}
-                    />
-                  )}
-                  {me.servidor && (
-                    <InfoRow label="Servidor">
-                      <span className="inline-flex items-center gap-2">
-                        <Server className="w-4 h-4 text-neutral-500" />
-                        {me.servidor.nome}
-                        <span className="text-xs text-neutral-500">({me.servidor.status})</span>
-                      </span>
-                    </InfoRow>
-                  )}
-                  {me.revendedor && <InfoRow label="Revendedor">{me.revendedor.nome}</InfoRow>}
+                  {(() => {
+                    const accounts =
+                      me.iptvAccounts && me.iptvAccounts.length > 0
+                        ? me.iptvAccounts
+                        : me.perfil || me.iptvUser
+                          ? [
+                              {
+                                id: 0,
+                                label: null as string | null,
+                                username: me.perfil || me.iptvUser || '',
+                                password: me.iptvPass,
+                                passwordSet: me.iptvPassSet,
+                                mac: me.iptvMac,
+                                m3u: me.iptvM3u,
+                                servidorId: me.servidor?.id ?? null,
+                                servidor: me.servidor,
+                              },
+                            ]
+                          : []
+                    if (accounts.length === 0) {
+                      return (
+                        <p className="text-sm text-neutral-500">
+                          Ainda não há contas IPTV associadas. Contacte a plural.
+                        </p>
+                      )
+                    }
+                    return (
+                      <div className="space-y-5">
+                        {accounts.map((acc, idx) => {
+                          const title =
+                            acc.label || (accounts.length > 1 ? `Conta ${idx + 1}` : 'Credenciais')
+                          const prefix = `iptv-${acc.id || idx}`
+                          return (
+                            <div
+                              key={acc.id || idx}
+                              className={
+                                accounts.length > 1
+                                  ? 'rounded-lg border border-neutral-800/80 p-4 space-y-1'
+                                  : 'space-y-1'
+                              }
+                            >
+                              {accounts.length > 1 && (
+                                <p className="text-sm font-medium ca-fg mb-2">{title}</p>
+                              )}
+                              {acc.username && (
+                                <CopyField
+                                  label="Utilizador / linha"
+                                  value={acc.username}
+                                  fieldId={`${prefix}-user`}
+                                  copiedField={copiedField}
+                                  onCopy={copyText}
+                                />
+                              )}
+                              {acc.password && (
+                                <CopyField
+                                  label="Palavra-passe"
+                                  value={acc.password}
+                                  fieldId={`${prefix}-pass`}
+                                  copiedField={copiedField}
+                                  onCopy={copyText}
+                                />
+                              )}
+                              {!acc.password && acc.passwordSet && (
+                                <InfoRow label="Palavra-passe">
+                                  Definida — contacte a plural se precisar
+                                </InfoRow>
+                              )}
+                              {acc.mac && (
+                                <CopyField
+                                  label="MAC"
+                                  value={acc.mac}
+                                  fieldId={`${prefix}-mac`}
+                                  copiedField={copiedField}
+                                  onCopy={copyText}
+                                />
+                              )}
+                              {acc.m3u && (
+                                <CopyField
+                                  label="Lista M3U"
+                                  value={acc.m3u}
+                                  fieldId={`${prefix}-m3u`}
+                                  copiedField={copiedField}
+                                  onCopy={copyText}
+                                />
+                              )}
+                              {acc.servidor && (
+                                <InfoRow label="Servidor">
+                                  <span className="inline-flex items-center gap-2">
+                                    <Server className="w-4 h-4 text-neutral-500" />
+                                    {acc.servidor.nome}
+                                    {acc.servidor.status && (
+                                      <span className="text-xs text-neutral-500">
+                                        ({acc.servidor.status})
+                                      </span>
+                                    )}
+                                  </span>
+                                </InfoRow>
+                              )}
+                            </div>
+                          )
+                        })}
+                        {me.revendedor && <InfoRow label="Revendedor">{me.revendedor.nome}</InfoRow>}
+                      </div>
+                    )
+                  })()}
                 </section>
               )}
             </motion.div>

@@ -68,7 +68,8 @@ router.get('/status', async (req, res) => {
       awaitingQr: health.awaitingQr === true,
       initError,
       message,
-      pairUrl: `${apiUrl}/pair`,
+      /** Abrir no browser e escanear QR (WhatsApp → Dispositivos ligados). */
+      pairUrl: `${apiUrl}/pair?token=${encodeURIComponent(token)}`,
     })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erro ao consultar API WhatsApp'
@@ -93,18 +94,63 @@ router.post('/test', requireAdmin, async (req, res) => {
     )
     const result = await sendWhatsAppMessageDetailed(raw, msg)
     if (!result.ok) {
+      const apiUrl = process.env.WHATSAPP_API_URL?.replace(/\/$/, '')
+      const token = process.env.WHATSAPP_TOKEN
+      const pairUrl =
+        apiUrl && token ? `${apiUrl}/pair?token=${encodeURIComponent(token)}` : undefined
       return res.status(503).json({
         ok: false,
         sent: false,
         phone,
         error: result.error,
-        hint: 'No Railway: POST /restart depois escaneie /pair de novo.',
+        pairUrl,
+        hint: pairUrl
+          ? 'Abra o link pairUrl, escaneie o QR no telemóvel (+244 933623143) e tente de novo.'
+          : 'Configure WHATSAPP_API_URL e WHATSAPP_TOKEN; depois escaneie o QR em /pair no Railway.',
       })
     }
     res.json({ ok: true, sent: true, phone, message: 'Mensagem de teste enviada. Verifique o WhatsApp.' })
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Erro ao enviar teste WhatsApp'
     res.status(500).json({ error: 'Erro ao enviar teste', detail: msg })
+  }
+})
+
+/** Reinicia o browser WhatsApp na API (Railway). Admin — útil antes de novo QR. */
+router.post('/restart', requireAdmin, async (req, res) => {
+  try {
+    const apiUrl = process.env.WHATSAPP_API_URL?.replace(/\/$/, '')
+    const token = process.env.WHATSAPP_TOKEN
+    if (!apiUrl || !token) {
+      return res.status(400).json({ error: 'WHATSAPP_API_URL ou WHATSAPP_TOKEN em falta' })
+    }
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 45_000)
+    const restartRes = await fetch(`${apiUrl}/restart`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    clearTimeout(timeout)
+    const body = (await restartRes.json().catch(() => ({}))) as { error?: string }
+    if (!restartRes.ok) {
+      return res.status(restartRes.status).json({
+        ok: false,
+        error: body.error || restartRes.statusText,
+      })
+    }
+    const health = await fetchWhatsappHealth(apiUrl)
+    const pairUrl = `${apiUrl}/pair?token=${encodeURIComponent(token)}`
+    res.json({
+      ok: true,
+      message: 'API reiniciada. Se ainda não estiver ligado, abra pairUrl e escaneie o QR.',
+      pairUrl,
+      connected: health.whatsapp === true,
+      awaitingQr: health.awaitingQr === true,
+    })
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Erro ao reiniciar WhatsApp'
+    res.status(500).json({ error: msg })
   }
 })
 

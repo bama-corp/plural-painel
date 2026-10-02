@@ -12,6 +12,7 @@ import {
   clientPortalAssistantRateLimit,
 } from '../middleware/rateLimits.js'
 import { ensureClientRoveId } from '../lib/roveId.js'
+import { loadClientIptvAccounts } from '../lib/clientSchema.js'
 import {
   getAssistantWelcome,
   getAssistantReply,
@@ -169,6 +170,19 @@ router.get('/me', clientPortalMiddleware, async (req, res) => {
     )
     .then((rows) => rows[0]?.portal_first_login ?? false)
     .catch(() => false)
+  const iptvAccountsRaw = await loadClientIptvAccounts(clientId, { decryptPasswords: true }).catch(() => [])
+  const iptvAccounts = iptvAccountsRaw.map((a) => ({
+    id: a.id,
+    label: a.label,
+    username: a.username,
+    password: a.password,
+    passwordSet: a.passwordSet,
+    mac: a.mac,
+    m3u: a.m3u,
+    servidorId: a.servidorId,
+    servidor: a.servidor,
+  }))
+  const primary = iptvAccounts[0]
   res.json({
     id: client.id,
     nome: client.nome,
@@ -185,12 +199,13 @@ router.get('/me', clientPortalMiddleware, async (req, res) => {
     sala: client.sala,
     servidor: client.servidor,
     revendedor: client.revendedor,
-    iptvUser: client.iptvUser,
-    iptvPassSet: !!(client.iptvPass && String(client.iptvPass).length > 0),
-    iptvPass: decryptField(client.iptvPass),
-    iptvMac: client.iptvMac,
+    iptvUser: primary?.username ?? client.iptvUser,
+    iptvPassSet: primary ? primary.passwordSet : !!(client.iptvPass && String(client.iptvPass).length > 0),
+    iptvPass: primary?.password ?? decryptField(client.iptvPass),
+    iptvMac: primary?.mac ?? client.iptvMac,
     roveId,
-    iptvM3u: client.iptvM3u,
+    iptvM3u: primary?.m3u ?? client.iptvM3u,
+    iptvAccounts,
     inscricaoPaga: client.inscricaoPaga,
     indicacoes: client.indicacoes,
     portalFirstLogin: portalFlag,
@@ -458,6 +473,16 @@ async function loadAssistantContext(clientId: number): Promise<ClientAssistantCo
     .then((rows) => rows[0]?.portal_first_login ?? false)
     .catch(() => false)
   const roveId = await ensureClientRoveId(clientId).catch(() => null)
+  const accounts = await loadClientIptvAccounts(clientId, { decryptPasswords: true }).catch(() => [])
+  const iptvAccounts = accounts.map((a) => ({
+    label: a.label,
+    username: a.username,
+    password: a.password,
+    mac: a.mac,
+    m3u: a.m3u,
+    servidorNome: a.servidor?.nome ?? null,
+  }))
+  const primary = iptvAccounts[0]
   return {
     nome: client.nome,
     whatsapp: client.whatsapp,
@@ -468,10 +493,11 @@ async function loadAssistantContext(clientId: number): Promise<ClientAssistantCo
     valor: Number(client.valor),
     perfil: client.perfil,
     pin: decryptField(client.pin),
-    iptvUser: client.iptvUser,
-    iptvPass: decryptField(client.iptvPass),
-    iptvMac: client.iptvMac,
-    iptvM3u: client.iptvM3u,
+    iptvUser: primary?.username ?? client.iptvUser,
+    iptvPass: primary?.password ?? decryptField(client.iptvPass),
+    iptvMac: primary?.mac ?? client.iptvMac,
+    iptvM3u: primary?.m3u ?? client.iptvM3u,
+    iptvAccounts,
     inscricaoPaga: client.inscricaoPaga,
     indicacoes: client.indicacoes,
     portalFirstLogin,

@@ -7,6 +7,9 @@ import {
   WifiOff,
   User,
   MessageSquare,
+  QrCode,
+  RefreshCw,
+  ExternalLink,
 } from 'lucide-react'
 import { api } from '../api/client'
 import { useAlert } from '../contexts/AlertContext'
@@ -35,6 +38,7 @@ interface WhatsappStatus {
   connected: boolean
   awaitingQr?: boolean
   message?: string
+  pairUrl?: string
 }
 
 const MAX_MESSAGE_LEN = 2000
@@ -100,6 +104,8 @@ export default function Suporte() {
   const [sending, setSending] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [waStatus, setWaStatus] = useState<WhatsappStatus | null>(null)
+  const [waRefreshing, setWaRefreshing] = useState(false)
+  const [waRestarting, setWaRestarting] = useState(false)
 
   const operadorNetflix = user?.role === 'netflix'
   const operadorIptv = user?.role === 'iptv'
@@ -137,6 +143,44 @@ export default function Suporte() {
         })
       )
   }, [])
+
+  async function refreshWaStatus() {
+    setWaRefreshing(true)
+    try {
+      const st = await api.get<WhatsappStatus>('/api/whatsapp/status')
+      setWaStatus(st)
+    } catch {
+      setWaStatus({
+        configured: false,
+        connected: false,
+        message: 'Não foi possível verificar o WhatsApp.',
+      })
+    } finally {
+      setWaRefreshing(false)
+    }
+  }
+
+  async function restartWhatsappApi() {
+    if (user?.role !== 'admin') return
+    setWaRestarting(true)
+    try {
+      const r = await api.post<{
+        ok: boolean
+        pairUrl?: string
+        message?: string
+        connected?: boolean
+      }>('/api/whatsapp/restart', {})
+      if (r.pairUrl) {
+        window.open(r.pairUrl, '_blank', 'noopener,noreferrer')
+      }
+      showSuccess(r.message || 'API reiniciada. Escaneie o QR se pedido.')
+      await refreshWaStatus()
+    } catch (e) {
+      showError(e instanceof Error ? e.message : 'Falha ao reiniciar a API WhatsApp')
+    } finally {
+      setWaRestarting(false)
+    }
+  }
 
   const selected = useMemo(
     () => clients.find((c) => c.id === selectedId) ?? null,
@@ -188,7 +232,12 @@ export default function Suporte() {
       const st = await api.get<WhatsappStatus>('/api/whatsapp/status').catch(() => null)
       if (st) setWaStatus(st)
     } catch (e) {
-      showError(e instanceof Error ? e.message : 'Falha ao enviar mensagem')
+      const err = e as Error & { pairUrl?: string; hint?: string }
+      const msg = err instanceof Error ? err.message : 'Falha ao enviar mensagem'
+      showError(err.hint ? `${msg} — ${err.hint}` : msg)
+      if (err.pairUrl) {
+        window.open(err.pairUrl, '_blank', 'noopener,noreferrer')
+      }
     } finally {
       setSending(false)
     }
@@ -206,17 +255,63 @@ export default function Suporte() {
             Envio individual e exclusivo via WhatsApp — um cliente de cada vez.
           </p>
         </div>
-        <div
-          className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${
-            waStatus?.connected
-              ? 'border-green-500/40 bg-green-900/20 text-green-300'
-              : 'border-amber-500/40 bg-amber-900/20 text-amber-200'
-          }`}
-        >
-          {waStatus?.connected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
-          <span>{waStatus?.message ?? 'A verificar WhatsApp…'}</span>
+        <div className="flex flex-col items-stretch sm:items-end gap-2">
+          <div
+            className={`inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs ${
+              waStatus?.connected
+                ? 'border-green-500/40 bg-green-900/20 text-green-300'
+                : 'border-amber-500/40 bg-amber-900/20 text-amber-200'
+            }`}
+          >
+            {waStatus?.connected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+            <span>{waStatus?.message ?? 'A verificar WhatsApp…'}</span>
+          </div>
+          <div className="flex flex-wrap gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => void refreshWaStatus()}
+              disabled={waRefreshing}
+              className="inline-flex items-center gap-1.5 rounded-md border border-netflix-border px-2.5 py-1.5 text-xs text-gray-300 hover:bg-netflix-hover disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${waRefreshing ? 'animate-spin' : ''}`} />
+              Actualizar estado
+            </button>
+            {!waStatus?.connected && waStatus?.pairUrl ? (
+              <a
+                href={waStatus.pairUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-primary-500"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                Escanear QR
+                <ExternalLink className="w-3 h-3 opacity-80" />
+              </a>
+            ) : null}
+            {user?.role === 'admin' && !waStatus?.connected ? (
+              <button
+                type="button"
+                onClick={() => void restartWhatsappApi()}
+                disabled={waRestarting}
+                className="inline-flex items-center gap-1.5 rounded-md border border-amber-500/50 px-2.5 py-1.5 text-xs text-amber-200 hover:bg-amber-900/30 disabled:opacity-50"
+              >
+                Reiniciar API
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
+
+      {!waStatus?.connected && waStatus?.configured !== false ? (
+        <div className="rounded-md border border-amber-500/40 bg-amber-950/40 px-4 py-3 text-sm text-amber-100">
+          <p className="font-medium">WhatsApp desligado na API (Railway)</p>
+          <p className="text-amber-200/90 mt-1 text-xs leading-relaxed">
+            No telemóvel do número <strong>+244 933623143</strong>: WhatsApp →{' '}
+            <strong>Dispositivos ligados</strong> → Ligar dispositivo → escaneie o QR na página que
+            abrir. Depois clique em «Actualizar estado».
+          </p>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 min-h-[28rem]">
         <div className="lg:col-span-2 rounded-md border border-netflix-border bg-netflix-card/80 flex flex-col overflow-hidden">

@@ -69,10 +69,18 @@ router.post(
     const result = await sendWhatsAppMessageDetailed(client.whatsapp, message)
     if (!result.ok) {
       const detail = result.error || 'WhatsApp não ligado'
+      const apiUrl = process.env.WHATSAPP_API_URL?.replace(/\/$/, '')
+      const token = process.env.WHATSAPP_TOKEN
+      const pairUrl =
+        apiUrl && token ? `${apiUrl}/pair?token=${encodeURIComponent(token)}` : undefined
       return res.status(503).json({
         ok: false,
         sent: false,
-        error: `${detail}. Confirme a sessão no Railway (/pair) e tente de novo.`,
+        error: detail,
+        pairUrl,
+        hint: pairUrl
+          ? 'WhatsApp desligado — abra pairUrl, escaneie o QR e envie de novo.'
+          : 'Confirme WHATSAPP_API_URL e WHATSAPP_TOKEN no servidor.',
       })
     }
 

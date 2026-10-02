@@ -20,7 +20,7 @@ import {
   getPortalPinPlainMap,
   setPortalPinPlainInDb,
 } from '../lib/portalPinPlain.js'
-import { ensureClientTableColumns } from '../lib/clientSchema.js'
+import { ensureClientTableColumns, ensureClientIptvAccountsTable, syncClientIptvAccounts, loadClientIptvAccounts, loadIptvAccountsForClients } from '../lib/clientSchema.js'
 import { ensureClientRoveId, ensureRoveIdsForClients } from '../lib/roveId.js'
 import { decryptField, encryptField } from '../lib/fieldCrypto.js'
 import { notifyPhPanel } from '../lib/notifyPh.js'
@@ -97,6 +97,7 @@ router.get('/', async (req, res) => {
   await Promise.all([
     ensureClientTableColumns().catch(() => {}),
     ensurePortalPinPlainColumn().catch(() => {}),
+    ensureClientIptvAccountsTable().catch(() => {}),
   ])
 
   await markExpiredClientsStatus()
@@ -107,7 +108,16 @@ router.get('/', async (req, res) => {
   const where: Prisma.ClientWhereInput = {}
   if (roleFilter) where.servico = roleFilter
   else if (servico) where.servico = String(servico)
-  if (servidorId) where.servidorId = Number(servidorId)
+  if (servidorId) {
+    const sid = Number(servidorId)
+    const servidorClause: Prisma.ClientWhereInput = {
+      OR: [{ servidorId: sid }, { iptvAccounts: { some: { servidorId: sid } } }],
+    }
+    where.AND = [
+      ...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []),
+      servidorClause,
+    ]
+  }
   if (salaId) where.salaId = Number(salaId)
   if (status) where.status = String(status)
   if (vencendo === 'hoje') {
@@ -154,11 +164,13 @@ router.get('/', async (req, res) => {
       { servidor: { nome: { contains: qTerm, mode: 'insensitive' } } },
       { revendedor: { nome: { contains: qTerm, mode: 'insensitive' } } },
       { sala: { nome: { contains: qTerm, mode: 'insensitive' } } },
+      { iptvAccounts: { some: { username: { contains: qTerm, mode: 'insensitive' } } } },
+      { iptvAccounts: { some: { label: { contains: qTerm, mode: 'insensitive' } } } },
     ]
     if (digits && digits !== qTerm) {
       or.push({ whatsapp: { contains: digits } })
     }
-    where.AND = [{ OR: or }]
+    where.AND = [...(Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : []), { OR: or }]
   }
 
   const clients = await prisma.client.findMany({
@@ -167,7 +179,7 @@ router.get('/', async (req, res) => {
     orderBy: { dataFim: 'asc' },
   })
   const clientIds = clients.map((c) => c.id)
-  const [pinPlainById, roveById] = await Promise.all([
+  const [pinPlainById, roveById, accountsById] = await Promise.all([
     includePortalPin
       ? getPortalPinPlainMap(clientIds).catch((err) => {
           console.error('[clients] portal PIN map:', err)
@@ -178,6 +190,10 @@ router.get('/', async (req, res) => {
       console.error('[clients] ROVE IDs:', err)
       return new Map<number, string>()
     }),
+    loadIptvAccountsForClients(clientIds, { decryptPasswords: includeCredenciais }).catch((err) => {
+      console.error('[clients] iptv accounts:', err)
+      return new Map()
+    }),
   ])
   const enriched = clients.map((c) => {
     const areaClienteAtiva = !!c.portalPinHash
@@ -186,8 +202,11 @@ router.get('/', async (req, res) => {
       ? sanitizeClientDetail(raw)
       : sanitizeClientListItem(raw)
     const fromDb = pinPlainById?.get(Number(c.id))
+    const iptvAccounts = accountsById.get(c.id) ?? []
     return {
       ...base,
+      iptvAccounts,
+      iptvAccountsCount: iptvAccounts.length,
       roveId: roveById.get(c.id) ?? c.roveId ?? null,
       areaClienteAtiva,
       ...(includePortalPin
@@ -202,6 +221,7 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   const user = (req as unknown as { user: AuthPayload }).user
+  await ensureClientIptvAccountsTable().catch(() => {})
   const client = await prisma.client.findUnique({
     where: { id: Number(req.params.id) },
     include: { servidor: true, revendedor: true, sala: true },
@@ -209,8 +229,11 @@ router.get('/:id', async (req, res) => {
   if (!client) return res.status(404).json({ error: 'Cliente não encontrado' })
   if (!canAccessServico(user.role, client.servico)) return res.status(403).json({ error: 'Sem acesso a este cliente' })
   const roveId = await ensureClientRoveId(client.id)
+  const iptvAccounts = await loadClientIptvAccounts(client.id, { decryptPasswords: true })
   res.json({
     ...sanitizeClientDetail({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
+    iptvAccounts,
+    iptvAccountsCount: iptvAccounts.length,
     roveId,
     areaClienteAtiva: !!client.portalPinHash,
   })
@@ -220,6 +243,7 @@ router.post('/', auditLog('create_client', 'client'), async (req, res) => {
   await Promise.all([
     ensureClientTableColumns().catch(() => {}),
     ensurePortalPinPlainColumn().catch(() => {}),
+    ensureClientIptvAccountsTable().catch(() => {}),
   ])
   const user = (req as unknown as { user: AuthPayload }).user
   if (!canManageClients(user.role)) return res.status(403).json({ error: 'Sem permissão para criar clientes' })
@@ -238,6 +262,24 @@ router.post('/', auditLog('create_client', 'client'), async (req, res) => {
   }
   const portalPlain =
     body.portalPin != null && String(body.portalPin).trim() !== '' ? String(body.portalPin).trim() : null
+
+  // Contas IPTV: se vierem no body, usam-se; senão legado perfil/iptvUser
+  const hasAccountsPayload = Array.isArray(body.iptvAccounts)
+  let firstUsername: string | null = body.perfil || body.iptvUser || null
+  let firstServidorId: number | null = body.servidorId ? Number(body.servidorId) : null
+  if (servico === 'iptv' && hasAccountsPayload) {
+    const accounts = body.iptvAccounts as Array<{ username?: string; servidorId?: number | null }>
+    const valid = accounts.filter((a) => a?.username && String(a.username).trim())
+    if (valid.length === 0) {
+      return res.status(400).json({ error: 'Adicione pelo menos uma conta IPTV com nome de utilizador.' })
+    }
+    firstUsername = String(valid[0].username).trim()
+    firstServidorId =
+      valid[0].servidorId != null && Number.isFinite(Number(valid[0].servidorId))
+        ? Number(valid[0].servidorId)
+        : firstServidorId
+  }
+
   const client = await prisma.client.create({
     data: {
       nome: body.nome,
@@ -245,11 +287,11 @@ router.post('/', auditLog('create_client', 'client'), async (req, res) => {
       localizacao: body.localizacao || null,
       servico,
       plano: body.plano || 'mensal',
-      servidorId: body.servidorId ? Number(body.servidorId) : null,
+      servidorId: firstServidorId,
       revendedorId: body.revendedorId ? Number(body.revendedorId) : null,
-      perfil: body.perfil || null,
+      perfil: servico === 'iptv' ? firstUsername : body.perfil || null,
       pin: body.pin != null && String(body.pin) !== '' ? encryptField(String(body.pin)) : null,
-      iptvUser: body.iptvUser || null,
+      iptvUser: servico === 'iptv' ? firstUsername : body.iptvUser || null,
       iptvPass: body.iptvPass != null && String(body.iptvPass) !== '' ? encryptField(String(body.iptvPass)) : null,
       iptvMac: body.iptvMac || null,
       iptvM3u: body.iptvM3u || null,
@@ -262,6 +304,39 @@ router.post('/', auditLog('create_client', 'client'), async (req, res) => {
       ...(portalPinHash ? { portalPinHash } : {}),
     },
   })
+
+  let iptvAccounts = [] as Awaited<ReturnType<typeof loadClientIptvAccounts>>
+  if (servico === 'iptv') {
+    const payload = hasAccountsPayload
+      ? body.iptvAccounts
+      : firstUsername
+        ? [
+            {
+              username: firstUsername,
+              password: body.iptvPass ?? null,
+              mac: body.iptvMac ?? null,
+              m3u: body.iptvM3u ?? null,
+              servidorId: firstServidorId,
+            },
+          ]
+        : []
+    if (Array.isArray(payload) && payload.length > 0) {
+      const synced = await syncClientIptvAccounts(client.id, payload)
+      if (synced.firstServidorId != null || synced.firstUsername) {
+        await prisma.client.update({
+          where: { id: client.id },
+          data: {
+            ...(synced.firstServidorId != null ? { servidorId: synced.firstServidorId } : {}),
+            ...(synced.firstUsername
+              ? { perfil: synced.firstUsername, iptvUser: synced.firstUsername }
+              : {}),
+          },
+        })
+      }
+      iptvAccounts = await loadClientIptvAccounts(client.id, { decryptPasswords: true })
+    }
+  }
+
   if (portalPinHash && portalPlain) {
     await setPortalPinPlainInDb(client.id, portalPlain)
   }
@@ -292,15 +367,24 @@ router.post('/', auditLog('create_client', 'client'), async (req, res) => {
   } catch (err) {
     console.error('[clients] ROVE ID no create:', err)
   }
+  const refreshed = await prisma.client.findUnique({ where: { id: client.id } })
   res.status(201).json({
-    ...sanitizeClientDetail({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
+    ...sanitizeClientDetail({
+      ...(refreshed ?? client),
+      valor: Number((refreshed ?? client).valor),
+    } as Record<string, unknown>),
+    iptvAccounts,
+    iptvAccountsCount: iptvAccounts.length,
     roveId,
     areaClienteAtiva: !!client.portalPinHash,
   })
 })
 
 router.patch('/:id', auditLog('update_client', 'client'), async (req, res) => {
-  await ensurePortalPinPlainColumn().catch(() => {})
+  await Promise.all([
+    ensurePortalPinPlainColumn().catch(() => {}),
+    ensureClientIptvAccountsTable().catch(() => {}),
+  ])
   const user = (req as unknown as { user: AuthPayload }).user
   const id = Number(req.params.id)
   const existing = await prisma.client.findUnique({ where: { id } })
@@ -352,6 +436,27 @@ router.patch('/:id', auditLog('update_client', 'client'), async (req, res) => {
       data.portalPinHash = await bcrypt.hash(plain, 10)
     }
   }
+
+  let iptvAccountsChanged = false
+  const servicoFinal = body.servico != null ? String(body.servico) : existing.servico
+  if (Array.isArray(body.iptvAccounts) && servicoFinal === 'iptv' && user.role !== 'financeiro') {
+    const valid = (body.iptvAccounts as Array<{ username?: string }>).filter(
+      (a) => a?.username && String(a.username).trim()
+    )
+    if (valid.length === 0) {
+      return res.status(400).json({ error: 'Adicione pelo menos uma conta IPTV com nome de utilizador.' })
+    }
+    const synced = await syncClientIptvAccounts(id, body.iptvAccounts)
+    iptvAccountsChanged = synced.changed
+    if (synced.firstUsername) {
+      data.perfil = synced.firstUsername
+      data.iptvUser = synced.firstUsername
+    }
+    if (synced.firstServidorId !== undefined) {
+      data.servidorId = synced.firstServidorId
+    }
+  }
+
   const client = await prisma.client.update({ where: { id }, data })
   if (body.portalPin !== undefined) {
     if (body.portalPin === null || String(body.portalPin).trim() === '') {
@@ -394,6 +499,7 @@ router.patch('/:id', auditLog('update_client', 'client'), async (req, res) => {
     ).catch(() => {})
   }
   const iptvChanged =
+    iptvAccountsChanged ||
     (body.iptvUser != null && body.iptvUser !== existing.iptvUser) ||
     (body.iptvPass != null && String(body.iptvPass) !== (decryptField(existing.iptvPass) ?? '')) ||
     (body.iptvMac != null && body.iptvMac !== existing.iptvMac) ||
@@ -415,8 +521,11 @@ router.patch('/:id', auditLog('update_client', 'client'), async (req, res) => {
   }
 
   const roveId = await ensureClientRoveId(client.id)
+  const iptvAccounts = await loadClientIptvAccounts(client.id, { decryptPasswords: true })
   res.json({
     ...sanitizeClientDetail({ ...client, valor: Number(client.valor) } as Record<string, unknown>),
+    iptvAccounts,
+    iptvAccountsCount: iptvAccounts.length,
     roveId,
     areaClienteAtiva: !!client.portalPinHash,
   })

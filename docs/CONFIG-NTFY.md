@@ -1,7 +1,11 @@
 # Alertas do painel com ntfy
 
-Os **alertas internos** (nova sala, cliente, servidor, cron de resumo, etc.) passam pelo [ntfy](https://ntfy.sh).  
+Os **alertas internos** (nova sala, cliente, servidor, etc.) e o **resumo do sino** (`/notificacoes`) passam pelo [ntfy](https://ntfy.sh).  
 As **mensagens a clientes** (lembretes, vencimento, indicação) continuam no WhatsApp.
+
+O cron diário (`/api/cron/alertas`) envia um digest com as mesmas categorias do badge:
+clientes vencidos, a vencer (7 dias), salas, indicações pendentes e servidores offline/instáveis.
+Ao tocar na notificação, abre `/notificacoes` no painel.
 
 ## Configuração
 

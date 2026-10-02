@@ -54,6 +54,73 @@ interface Client {
   servidor?: { id: number; nome: string } | null
   revendedor?: { id: number; nome: string } | null
   areaClienteAtiva?: boolean
+  iptvAccounts?: IptvAccountRow[]
+  iptvAccountsCount?: number
+}
+
+interface IptvAccountRow {
+  id?: number | null
+  label?: string | null
+  username: string
+  password?: string | null
+  passwordSet?: boolean
+  mac?: string | null
+  m3u?: string | null
+  servidorId?: number | null
+  servidor?: { id: number; nome: string; status?: string } | null
+}
+
+type IptvAccountForm = {
+  key: string
+  id: number | null
+  label: string
+  username: string
+  password: string
+  mac: string
+  m3u: string
+  servidorId: number | null
+  passwordSet?: boolean
+}
+
+function emptyIptvAccount(partial?: Partial<IptvAccountForm>): IptvAccountForm {
+  return {
+    key: `new-${Math.random().toString(36).slice(2, 9)}`,
+    id: null,
+    label: '',
+    username: '',
+    password: '',
+    mac: '',
+    m3u: '',
+    servidorId: null,
+    ...partial,
+  }
+}
+
+function accountsFromClient(c: Partial<Client>): IptvAccountForm[] {
+  if (Array.isArray(c.iptvAccounts) && c.iptvAccounts.length > 0) {
+    return c.iptvAccounts.map((a) =>
+      emptyIptvAccount({
+        key: a.id ? `id-${a.id}` : undefined,
+        id: a.id ?? null,
+        label: a.label ?? '',
+        username: a.username ?? '',
+        password: a.password ?? '',
+        mac: a.mac ?? '',
+        m3u: a.m3u ?? '',
+        servidorId: a.servidorId ?? null,
+        passwordSet: a.passwordSet || !!a.password,
+      })
+    )
+  }
+  if (c.perfil || (c as { iptvUser?: string }).iptvUser) {
+    return [
+      emptyIptvAccount({
+        username: c.perfil || (c as { iptvUser?: string }).iptvUser || '',
+        servidorId: c.servidorId ?? null,
+      }),
+    ]
+  }
+  return [emptyIptvAccount()]
 }
 
 interface Servidor {
@@ -174,7 +241,11 @@ export default function Clientes() {
   const servicoInicial = (servicoFixo ?? 'iptv') as 'iptv' | 'netflix'
   const planoInicial = planoPredefinido(servicoInicial)
   const [form, setForm] = useState<
-    Partial<Client> & { portalPin?: string; removerPinPortal?: boolean }
+    Partial<Client> & {
+      portalPin?: string
+      removerPinPortal?: boolean
+      iptvAccountsForm?: IptvAccountForm[]
+    }
   >({
     nome: '',
     whatsapp: emptyWhatsapp(),
@@ -185,6 +256,7 @@ export default function Clientes() {
     dataFim: '',
     portalPin: '',
     removerPinPortal: false,
+    iptvAccountsForm: servicoInicial === 'iptv' ? [emptyIptvAccount()] : [],
   })
 
   function load(searchQuery = searchDebounced) {
@@ -249,6 +321,7 @@ export default function Clientes() {
           whatsapp: formatWhatsapp(detail.whatsapp || ''),
           portalPin: '',
           removerPinPortal: false,
+          iptvAccountsForm: accountsFromClient(detail),
         })
         setModal('edit')
         const url = new URL(window.location.href)
@@ -268,11 +341,6 @@ export default function Clientes() {
   const totalTablePages = Math.max(1, Math.ceil(clients.length / ROWS_PER_PAGE))
   const tablePageClamped = Math.min(tablePage, totalTablePages)
   const pagedClientes = clients.slice((tablePageClamped - 1) * ROWS_PER_PAGE, tablePageClamped * ROWS_PER_PAGE)
-
-  /** Nos formulários de add/edit: só servidores online (mantém o atual se já estiver offline). */
-  const servidoresParaForm = servidores.filter(
-    (s) => s.status === 'online' || s.status == null || s.id === form.servidorId
-  )
 
   const showIptvTab = !operadorNetflix
   const showNetflixTab = !operadorIptv
@@ -307,7 +375,8 @@ export default function Clientes() {
       return 'Valor mensal é obrigatório.'
     }
     if (form.servico === 'iptv') {
-      if (!(form.perfil ?? '').trim()) return 'Nome de utilizador é obrigatório.'
+      const accounts = (form.iptvAccountsForm ?? []).filter((a) => a.username.trim())
+      if (accounts.length === 0) return 'Adicione pelo menos uma conta IPTV com nome de utilizador.'
       if (!form.dataFim || !String(form.dataFim).trim()) return 'Data fim é obrigatória.'
     }
     if (form.servico === 'netflix') {
@@ -334,7 +403,8 @@ export default function Clientes() {
       return 'Valor mensal é obrigatório.'
     }
     if (form.servico === 'iptv') {
-      if (!(form.perfil ?? '').trim()) return 'Nome de utilizador é obrigatório.'
+      const accounts = (form.iptvAccountsForm ?? []).filter((a) => a.username.trim())
+      if (accounts.length === 0) return 'Adicione pelo menos uma conta IPTV com nome de utilizador.'
       if (!form.dataFim || !String(form.dataFim).trim()) return 'Data fim é obrigatória.'
     }
     if (form.servico === 'netflix') {
@@ -362,17 +432,38 @@ export default function Clientes() {
     }
     try {
       const nomeCliente = (form.nome ?? '').trim()
+      const iptvAccountsPayload =
+        form.servico === 'iptv'
+          ? (form.iptvAccountsForm ?? [])
+              .filter((a) => a.username.trim())
+              .map((a, i) => ({
+                id: a.id ?? undefined,
+                label: a.label.trim() || null,
+                username: a.username.trim(),
+                password: a.password.trim() || null,
+                mac: a.mac.trim() || null,
+                m3u: a.m3u.trim() || null,
+                servidorId: a.servidorId,
+                sortOrder: i,
+              }))
+          : undefined
       if (modal === 'new') {
         const body: Record<string, unknown> = {
           ...form,
           dataFim: form.dataFim || undefined,
-          servidorId: form.servidorId || null,
+          servidorId: iptvAccountsPayload?.[0]?.servidorId ?? form.servidorId ?? null,
           revendedorId: form.revendedorId || null,
           localizacao: form.localizacao || null,
           salaId: form.salaId ?? null,
+          perfil:
+            form.servico === 'iptv'
+              ? iptvAccountsPayload?.[0]?.username ?? null
+              : form.perfil,
         }
         delete body.areaClienteAtiva
         delete body.removerPinPortal
+        delete body.iptvAccountsForm
+        if (iptvAccountsPayload) body.iptvAccounts = iptvAccountsPayload
         body.portalPin = String(form.portalPin).trim()
         await api.post<Client>('/api/clients', body)
         showSuccess(`Cliente «${nomeCliente}» criado com sucesso.`)
@@ -381,6 +472,12 @@ export default function Clientes() {
         delete patch.areaClienteAtiva
         delete patch.removerPinPortal
         delete patch.portalPin
+        delete patch.iptvAccountsForm
+        if (iptvAccountsPayload) {
+          patch.iptvAccounts = iptvAccountsPayload
+          patch.perfil = iptvAccountsPayload[0]?.username ?? form.perfil
+          patch.servidorId = iptvAccountsPayload[0]?.servidorId ?? null
+        }
         if (form.removerPinPortal) patch.portalPin = ''
         else if (form.portalPin?.trim() && form.portalPin.trim().length >= 4) patch.portalPin = form.portalPin.trim()
         await api.patch(`/api/clients/${form.id}`, patch)
@@ -401,6 +498,7 @@ export default function Clientes() {
           revendedorId: null,
           portalPin: '',
           removerPinPortal: false,
+          iptvAccountsForm: serv === 'iptv' ? [emptyIptvAccount()] : [],
         })
       }
       load()
@@ -582,6 +680,7 @@ export default function Clientes() {
                 revendedorId: null,
                 portalPin: '',
                 removerPinPortal: false,
+                iptvAccountsForm: tab === 'iptv' ? [emptyIptvAccount()] : [],
               })
               setModal('new')
             }}
@@ -719,6 +818,7 @@ export default function Clientes() {
                   <th className="px-4 py-3.5 font-medium">Localização</th>
                   {tab === 'iptv' && (
                     <>
+                      <th className="px-4 py-3.5 font-medium">Contas</th>
                       <th className="px-4 py-3.5 font-medium">Servidor</th>
                       <th className="px-4 py-3.5 font-medium">Revendedor</th>
                     </>
@@ -771,7 +871,24 @@ export default function Clientes() {
                       <td className="px-4 py-3 text-sm text-gray-400" data-label="Localização">{c.localizacao || '—'}</td>
                       {tab === 'iptv' && (
                         <>
-                          <td className="px-4 py-3 text-sm text-gray-400" data-label="Servidor">{c.servidor?.nome ?? '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-300" data-label="Contas">
+                            {(() => {
+                              const n = c.iptvAccountsCount ?? c.iptvAccounts?.length ?? (c.perfil ? 1 : 0)
+                              const first =
+                                c.iptvAccounts?.[0]?.username || c.perfil || '—'
+                              return n > 1 ? (
+                                <span>
+                                  {first}{' '}
+                                  <span className="text-xs text-primary-300">+{n - 1}</span>
+                                </span>
+                              ) : (
+                                first
+                              )
+                            })()}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-400" data-label="Servidor">
+                            {c.iptvAccounts?.[0]?.servidor?.nome ?? c.servidor?.nome ?? '—'}
+                          </td>
                           <td className="px-4 py-3 text-sm text-gray-400" data-label="Revendedor">{c.revendedor?.nome ?? '—'}</td>
                         </>
                       )}
@@ -838,6 +955,7 @@ export default function Clientes() {
                                     whatsapp: formatWhatsapp(detail.whatsapp || ''),
                                     portalPin: '',
                                     removerPinPortal: false,
+                                    iptvAccountsForm: accountsFromClient(detail),
                                   })
                                   setModal('edit')
                                 } catch (e) {
@@ -1436,31 +1554,7 @@ export default function Clientes() {
                     )}
                   </div>
                   {form.servico === 'iptv' && (
-                    <div className={`grid grid-cols-1 sm:grid-cols-2 ${compactClientForm ? 'gap-2 mt-2.5' : 'gap-3 mt-4'}`}>
-                      <div>
-                        <label
-                          className={`block font-medium text-gray-300 ${compactClientForm ? 'text-xs mb-1' : 'text-sm mb-0.5'}`}
-                        >
-                          Servidor
-                        </label>
-                        <RoveSelect
-                          compact={compactClientForm}
-                          value={form.servidorId ?? ''}
-                          onChange={(e) =>
-                            setForm((f) => ({ ...f, servidorId: e.target.value ? Number(e.target.value) : null }))
-                          }
-                        >
-                          <option value="">Selecione o servidor (opcional)</option>
-                          {servidoresParaForm.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.tipo === 'secundario' && s.servidor
-                                ? `${s.nome} (Secundário → ${s.servidor.nome})`
-                                : s.nome}
-                              {s.status && s.status !== 'online' ? ` (${s.status})` : ''}
-                            </option>
-                          ))}
-                        </RoveSelect>
-                      </div>
+                    <div className={compactClientForm ? 'mt-2.5' : 'mt-4'}>
                       <div>
                         <label
                           className={`block font-medium text-gray-300 ${compactClientForm ? 'text-xs mb-1' : 'text-sm mb-0.5'}`}
@@ -1518,19 +1612,199 @@ export default function Clientes() {
                         </div>
                       </div>
                     ) : (
-                      <div>
-                        <label className="block font-medium text-gray-300 text-xs mb-1">
-                          Nome de utilizador
-                          <RequiredMark />
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={form.perfil || ''}
-                          onChange={(e) => setForm((f) => ({ ...f, perfil: e.target.value }))}
-                          className={NEW_CLIENT_INPUT_SM}
-                          placeholder="Ex: nome de utilizador da linha"
-                        />
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                            Contas IPTV
+                            <RequiredMark />
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setForm((f) => ({
+                                ...f,
+                                iptvAccountsForm: [...(f.iptvAccountsForm ?? []), emptyIptvAccount()],
+                              }))
+                            }
+                            className="inline-flex items-center gap-1 h-7 px-2 rounded-md border border-netflix-border text-[11px] text-gray-300 hover:bg-white/5 hover:text-white"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Adicionar conta
+                          </button>
+                        </div>
+                        {(form.iptvAccountsForm ?? [emptyIptvAccount()]).map((acc, idx) => {
+                          const servidoresConta = servidores.filter(
+                            (s) =>
+                              s.status === 'online' ||
+                              s.status == null ||
+                              s.id === acc.servidorId
+                          )
+                          return (
+                            <div
+                              key={acc.key}
+                              className="rounded-md border border-netflix-border/80 bg-netflix-panel/40 p-2.5 space-y-2"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium text-gray-300">
+                                  Conta {idx + 1}
+                                </span>
+                                {(form.iptvAccountsForm?.length ?? 0) > 1 && (
+                                  <button
+                                    type="button"
+                                    title="Remover conta"
+                                    onClick={() =>
+                                      setForm((f) => ({
+                                        ...f,
+                                        iptvAccountsForm: (f.iptvAccountsForm ?? []).filter(
+                                          (a) => a.key !== acc.key
+                                        ),
+                                      }))
+                                    }
+                                    className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-red-500/40 text-red-300 hover:bg-red-500/20"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block font-medium text-gray-400 text-[10px] mb-0.5">
+                                    Etiqueta
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={acc.label}
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      setForm((f) => ({
+                                        ...f,
+                                        iptvAccountsForm: (f.iptvAccountsForm ?? []).map((a) =>
+                                          a.key === acc.key ? { ...a, label: v } : a
+                                        ),
+                                      }))
+                                    }}
+                                    className={NEW_CLIENT_INPUT_SM}
+                                    placeholder="Ex: Casa, TV sala"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block font-medium text-gray-400 text-[10px] mb-0.5">
+                                    Utilizador
+                                    <RequiredMark />
+                                  </label>
+                                  <input
+                                    type="text"
+                                    required
+                                    value={acc.username}
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      setForm((f) => ({
+                                        ...f,
+                                        iptvAccountsForm: (f.iptvAccountsForm ?? []).map((a) =>
+                                          a.key === acc.key ? { ...a, username: v } : a
+                                        ),
+                                      }))
+                                    }}
+                                    className={NEW_CLIENT_INPUT_SM}
+                                    placeholder="Nome de utilizador da linha"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block font-medium text-gray-400 text-[10px] mb-0.5">
+                                    Senha
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={acc.password}
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      setForm((f) => ({
+                                        ...f,
+                                        iptvAccountsForm: (f.iptvAccountsForm ?? []).map((a) =>
+                                          a.key === acc.key ? { ...a, password: v } : a
+                                        ),
+                                      }))
+                                    }}
+                                    className={NEW_CLIENT_INPUT_SM}
+                                    placeholder={
+                                      acc.passwordSet && !acc.password
+                                        ? '•••• (mantém se vazio)'
+                                        : 'Senha IPTV'
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block font-medium text-gray-400 text-[10px] mb-0.5">
+                                    Servidor
+                                  </label>
+                                  <RoveSelect
+                                    compact
+                                    value={acc.servidorId ?? ''}
+                                    onChange={(e) => {
+                                      const sid = e.target.value ? Number(e.target.value) : null
+                                      setForm((f) => ({
+                                        ...f,
+                                        iptvAccountsForm: (f.iptvAccountsForm ?? []).map((a) =>
+                                          a.key === acc.key ? { ...a, servidorId: sid } : a
+                                        ),
+                                      }))
+                                    }}
+                                  >
+                                    <option value="">Sem servidor</option>
+                                    {servidoresConta.map((s) => (
+                                      <option key={s.id} value={s.id}>
+                                        {s.tipo === 'secundario' && s.servidor
+                                          ? `${s.nome} (Sec. → ${s.servidor.nome})`
+                                          : s.nome}
+                                        {s.status && s.status !== 'online' ? ` (${s.status})` : ''}
+                                      </option>
+                                    ))}
+                                  </RoveSelect>
+                                </div>
+                                <div>
+                                  <label className="block font-medium text-gray-400 text-[10px] mb-0.5">
+                                    MAC
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={acc.mac}
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      setForm((f) => ({
+                                        ...f,
+                                        iptvAccountsForm: (f.iptvAccountsForm ?? []).map((a) =>
+                                          a.key === acc.key ? { ...a, mac: v } : a
+                                        ),
+                                      }))
+                                    }}
+                                    className={NEW_CLIENT_INPUT_SM}
+                                    placeholder="Opcional"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block font-medium text-gray-400 text-[10px] mb-0.5">
+                                    Lista M3U
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={acc.m3u}
+                                    onChange={(e) => {
+                                      const v = e.target.value
+                                      setForm((f) => ({
+                                        ...f,
+                                        iptvAccountsForm: (f.iptvAccountsForm ?? []).map((a) =>
+                                          a.key === acc.key ? { ...a, m3u: v } : a
+                                        ),
+                                      }))
+                                    }}
+                                    className={NEW_CLIENT_INPUT_SM}
+                                    placeholder="URL M3U (opcional)"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                     {(() => {

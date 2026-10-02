@@ -17,14 +17,16 @@ export type { PanelAlertCategory } from './panelAlertPrefs.js'
 /** @deprecated Usar PanelAlertCategory em notifyPanelUsers */
 export type PanelAlertScope = 'admin' | 'geral' | 'financeiro' | 'netflix' | 'iptv' | 'suporte' | 'all'
 
-function panelClickUrl(): string | undefined {
+function panelClickUrl(path = '/notificacoes'): string | undefined {
   const base = (
     process.env.PANEL_PUBLIC_URL ||
     process.env.ROVE_PUBLIC_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '') ||
     ''
   ).replace(/\/$/, '')
-  return base || undefined
+  if (!base) return undefined
+  const p = path.startsWith('/') ? path : `/${path}`
+  return `${base}${p}`
 }
 
 /**
@@ -72,17 +74,36 @@ export async function notifyClientVencimento(
 }
 
 /**
- * Marca ativos com data fim passada como vencido e envia WhatsApp (uma vez, até sucesso).
- * Também tenta de novo clientes já vencidos ainda sem notificação.
+ * Marca ativos com data fim passada como vencido.
+ * Envia ntfy (sino) quando há clientes novos a passar a vencido.
+ * WhatsApp de vencimento fica em notifyPendingVencidosWhatsApp.
  */
 export async function markExpiredClientsStatus(): Promise<number> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const r = await prisma.client.updateMany({
+  const toExpire = await prisma.client.findMany({
     where: { status: 'ativo', dataFim: { lt: today } },
+    select: { id: true, nome: true, servico: true, whatsapp: true },
+    orderBy: { nome: 'asc' },
+  })
+  if (toExpire.length === 0) return 0
+
+  await prisma.client.updateMany({
+    where: { id: { in: toExpire.map((c) => c.id) } },
     data: { status: 'vencido' },
   })
-  return r.count
+
+  const preview = toExpire
+    .slice(0, 12)
+    .map((c) => `• ${c.nome} (${c.servico === 'netflix' ? 'Netflix' : 'IPTV'})`)
+    .join('\n')
+  const more = toExpire.length > 12 ? `\n… e mais ${toExpire.length - 12}` : ''
+  void notifyPanelUsers(
+    ['clientes_netflix', 'clientes_iptv'],
+    `Clientes passaram a vencido (${toExpire.length}):\n${preview}${more}`
+  )
+
+  return toExpire.length
 }
 
 export async function notifyPendingVencidosWhatsApp(): Promise<number> {

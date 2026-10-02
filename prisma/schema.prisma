@@ -61,8 +61,29 @@ model Client {
   updatedAt   DateTime  @updatedAt
 
   indicacoesComoIndicador Indicacao[] @relation("indicador")
+  iptvAccounts            ClientIptvAccount[]
 
   @@map("clients")
+}
+
+// Contas/linhas IPTV de um cliente (facturação continua no Client)
+model ClientIptvAccount {
+  id         Int       @id @default(autoincrement())
+  clientId   Int       @map("client_id")
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  label      String?
+  username   String
+  password   String?   // cifrado AES
+  mac        String?
+  m3u        String?
+  servidorId Int?      @map("servidor_id")
+  servidor   Servidor? @relation(fields: [servidorId], references: [id])
+  sortOrder  Int       @default(0) @map("sort_order")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  @@index([clientId])
+  @@map("client_iptv_accounts")
 }
 
 // Salas Netflix (Plano Room) – contas em que os clientes estão; data fim da conta ≠ dataFim de cada cliente
@@ -97,6 +118,7 @@ model Servidor {
   updatedAt     DateTime  @updatedAt
 
   clients     Client[]
+  iptvAccounts ClientIptvAccount[]
   revendedores Revendedor[]
   @@map("servidores")
 }

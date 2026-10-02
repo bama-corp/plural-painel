@@ -34,7 +34,12 @@ async function request<T>(
     throw new Error('Não autorizado')
   }
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText })) as { error?: string; detail?: string }
+    const err = (await res.json().catch(() => ({ error: res.statusText }))) as {
+      error?: string
+      detail?: string
+      hint?: string
+      pairUrl?: string
+    }
     const raw = (err.error || res.statusText || '').trim()
     // Nunca mostrar stack traces / detalhes técnicos ao utilizador
     const looksTechnical =
@@ -50,7 +55,10 @@ async function request<T>(
           : 'Ocorreu um erro. Tente novamente.'
       )
     }
-    throw new Error(raw)
+    const e = new Error(raw) as Error & { hint?: string; pairUrl?: string }
+    if (err.hint) e.hint = err.hint
+    if (err.pairUrl) e.pairUrl = err.pairUrl
+    throw e
   }
   if (res.status === 204) return undefined as T
   return res.json() as Promise<T>

@@ -2,11 +2,11 @@ import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { sendWhatsAppMessage, templates } from '../services/whatsapp.js'
 import {
-  notifyPanelUsers,
   syncExpiredClientsAndNotifyWhatsApp,
   LEMBRETE_DIAS,
   formatDateBr,
 } from '../lib/whatsappNotify.js'
+import { notifyPanelBadgeDigest } from '../lib/panelNotifDigest.js'
 
 const router = Router()
 
@@ -38,7 +38,7 @@ router.get('/alertas', async (req, res) => {
   const in7Days = new Date(today)
   in7Days.setDate(in7Days.getDate() + 7)
 
-  // Alertas para admin (salas e servidores) – calculados sempre que houver necessidade.
+  // Contagens auxiliares para o cron (lembretes WA + extras no digest)
   const salasVencendo = await prisma.sala.findMany({
     where: { status: 'ativo', dataFim: { gte: today, lte: in7Days } },
     select: { id: true, nome: true, dataFim: true },
@@ -69,7 +69,7 @@ router.get('/alertas', async (req, res) => {
     in7Days
   ).catch(() => [])
 
-  /** Vencidos: marcar + WhatsApp no número registado (retry até sucesso). */
+  /** Vencidos: marcar + WhatsApp no número registado (retry até sucesso) + ntfy. */
   let vencidosAutoSent = 0
   if (!testAdmin) {
     vencidosAutoSent = await syncExpiredClientsAndNotifyWhatsApp()
@@ -94,60 +94,41 @@ router.get('/alertas', async (req, res) => {
     }
   }
 
-  const inscricoesPendentes = await prisma.client.count({
-    where: { servico: 'netflix', inscricaoPaga: false, status: { not: 'cancelado' } },
-  }).catch(() => 0)
-  const indicacoesPendentes = await prisma.indicacao.count({ where: { status: 'pendente' } }).catch(() => 0)
+  const inscricoesPendentes = await prisma.client
+    .count({
+      where: { servico: 'netflix', inscricaoPaga: false, status: { not: 'cancelado' } },
+    })
+    .catch(() => 0)
 
-  const shouldNotifyAdmin =
-    testAdmin ||
-    clients.length > 0 ||
-    vencidosAutoSent > 0 ||
-    salasVencendo.length > 0 ||
-    salasVencidas.length > 0 ||
-    servidoresProblema.length > 0 ||
-    servidoresPagamento.length > 0 ||
-    inscricoesPendentes > 0 ||
-    indicacoesPendentes > 0
-  if (shouldNotifyAdmin) {
-    const adminMsg = testAdmin
-      ? 'Teste ntfy do painel (clientes/salas/servidores). Se recebeu esta notificação, está a funcionar.'
-      : [
-          vencidosAutoSent > 0 ? `Clientes notificados (vencimento automático): ${vencidosAutoSent}` : null,
-          sent > 0 ? `Lembretes de renovação enviados hoje: ${sent}` : null,
-          clients.length > 0 ? `Clientes a vencer (7 dias): ${clients.length}` : null,
-          inscricoesPendentes > 0 ? `Inscrições Netflix pendentes: ${inscricoesPendentes}` : null,
-          indicacoesPendentes > 0 ? `Indicações pendentes: ${indicacoesPendentes}` : null,
-          salasVencendo.length > 0
-            ? `Salas a vencer (7 dias): ${salasVencendo.length} (${salasVencendo
-                .slice(0, 5)
-                .map((s) => `${s.nome} (${formatDateBr(s.dataFim!)})`)
-                .join(', ')}${salasVencendo.length > 5 ? '...' : ''})`
-            : null,
-          salasVencidas.length > 0
-            ? `Salas vencidas: ${salasVencidas.length} (${salasVencidas
-                .slice(0, 5)
-                .map((s) => `${s.nome} (${formatDateBr(s.dataFim!)})`)
-                .join(', ')}${salasVencidas.length > 5 ? '...' : ''})`
-            : null,
-          servidoresPagamento.length > 0
-            ? `Servidores com pagamento nos próximos 7 dias: ${servidoresPagamento.length} (${servidoresPagamento
-                .slice(0, 5)
-                .map((s) => `${s.nome} (${formatDateBr(s.data_pagamento!)})`)
-                .join(', ')}${servidoresPagamento.length > 5 ? '...' : ''})`
-            : null,
-          servidoresProblema.length > 0
-            ? `Servidores instável/offline: ${servidoresProblema.length} (${servidoresProblema
-                .slice(0, 5)
-                .map((s) => `${s.nome} (${s.status}, ${s._count.clients} cliente(s))`)
-                .join(', ')}${servidoresProblema.length > 5 ? '...' : ''})`
-            : null,
-        ]
-          .filter(Boolean)
-          .join('\n')
-
-    void notifyPanelUsers('resumo', adminMsg)
+  const extraLines: string[] = []
+  if (!testAdmin) {
+    if (vencidosAutoSent > 0) {
+      extraLines.push(`Clientes notificados (vencimento automático WA): ${vencidosAutoSent}`)
+    }
+    if (sent > 0) {
+      extraLines.push(`Lembretes de renovação enviados hoje: ${sent}`)
+    }
+    if (inscricoesPendentes > 0) {
+      extraLines.push(`Inscrições Netflix pendentes: ${inscricoesPendentes}`)
+    }
+    if (servidoresPagamento.length > 0) {
+      extraLines.push(
+        `Servidores com pagamento nos próximos 7 dias: ${servidoresPagamento.length} (${servidoresPagamento
+          .slice(0, 5)
+          .map((s) => `${s.nome} (${formatDateBr(s.data_pagamento!)})`)
+          .join(', ')}${servidoresPagamento.length > 5 ? '…' : ''})`
+      )
+    }
   }
+
+  const digest = await notifyPanelBadgeDigest(
+    testAdmin
+      ? {
+          testMessage:
+            'Teste ntfy do painel (sino/notificações). Se recebeu esta notificação, está a funcionar.',
+        }
+      : { extraLines }
+  )
 
   res.json({
     ok: true,
@@ -155,6 +136,8 @@ router.get('/alertas', async (req, res) => {
     sent,
     vencidosAutoNotificados: testAdmin ? undefined : vencidosAutoSent,
     testAdmin: testAdmin || undefined,
+    ntfyDigestSent: digest.sent,
+    badge: digest.stats,
     salasVencendo: salasVencendo.length,
     salasVencidas: salasVencidas.length,
     servidoresProblema: servidoresProblema.length,

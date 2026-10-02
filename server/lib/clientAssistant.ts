@@ -15,6 +15,15 @@ export interface AssistantReply {
   autoActions?: AssistantAction[]
 }
 
+export interface ClientIptvAccountInfo {
+  label: string | null
+  username: string
+  password: string | null
+  mac: string | null
+  m3u: string | null
+  servidorNome: string | null
+}
+
 export interface ClientAssistantContext {
   nome: string
   whatsapp: string
@@ -29,6 +38,7 @@ export interface ClientAssistantContext {
   iptvPass: string | null
   iptvMac: string | null
   iptvM3u: string | null
+  iptvAccounts: ClientIptvAccountInfo[]
   inscricaoPaga: boolean | null
   indicacoes: number
   portalFirstLogin: boolean
@@ -121,14 +131,36 @@ function buildCredentialsText(ctx: ClientAssistantContext): string {
       .filter(Boolean)
       .join('\n')
   }
-  return [
-    ctx.perfil || ctx.iptvUser ? `Utilizador: ${ctx.perfil || ctx.iptvUser}` : null,
-    ctx.iptvPass ? `Senha: ${ctx.iptvPass}` : null,
-    ctx.iptvMac ? `MAC: ${ctx.iptvMac}` : null,
-    ctx.iptvM3u ? `M3U: ${ctx.iptvM3u}` : null,
-  ]
-    .filter(Boolean)
-    .join('\n')
+  const accounts = ctx.iptvAccounts?.length
+    ? ctx.iptvAccounts
+    : ctx.perfil || ctx.iptvUser
+      ? [
+          {
+            label: null,
+            username: ctx.perfil || ctx.iptvUser || '',
+            password: ctx.iptvPass,
+            mac: ctx.iptvMac,
+            m3u: ctx.iptvM3u,
+            servidorNome: null,
+          },
+        ]
+      : []
+  if (accounts.length === 0) return ''
+  return accounts
+    .map((a, i) => {
+      const title = a.label || (accounts.length > 1 ? `Conta ${i + 1}` : 'IPTV')
+      return [
+        `— ${title} —`,
+        a.username ? `Utilizador: ${a.username}` : null,
+        a.password ? `Senha: ${a.password}` : null,
+        a.mac ? `MAC: ${a.mac}` : null,
+        a.m3u ? `M3U: ${a.m3u}` : null,
+        a.servidorNome ? `Servidor: ${a.servidorNome}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n')
+    })
+    .join('\n\n')
 }
 
 type AssistantTab = 'servico' | 'renovar' | 'indicar' | 'conta' | 'inicio'
@@ -467,27 +499,52 @@ export function getAssistantReply(ctx: ClientAssistantContext, rawMessage: strin
       }
     }
 
+    const accounts = ctx.iptvAccounts?.length
+      ? ctx.iptvAccounts
+      : ctx.perfil || ctx.iptvUser
+        ? [
+            {
+              label: null as string | null,
+              username: ctx.perfil || ctx.iptvUser || '',
+              password: ctx.iptvPass,
+              mac: ctx.iptvMac,
+              m3u: ctx.iptvM3u,
+              servidorNome: null as string | null,
+            },
+          ]
+        : []
+    const accountLines = accounts.flatMap((a, i) => {
+      const title = a.label || (accounts.length > 1 ? `Conta ${i + 1}` : null)
+      return [
+        title ? `**${title}**` : null,
+        a.username ? `• Utilizador: **${a.username}**` : null,
+        a.password ? '• Senha: disponível para copiar' : '• Senha: contacte a plural se não aparecer',
+        a.mac ? `• MAC: **${a.mac}**` : null,
+        a.m3u ? '• Lista M3U: disponível para copiar' : null,
+        a.servidorNome ? `• Servidor: **${a.servidorNome}**` : null,
+        '',
+      ]
+    })
+    const m3uAll = accounts.map((a) => a.m3u).filter(Boolean).join('\n')
+
     return {
       reply: [
         'Credenciais **IPTV** — passo a passo:',
         '1. Abra a aba **IPTV**',
-        '2. Copie utilizador e senha (ou «Copiar tudo»)',
+        '2. Copie utilizador e senha de cada conta (ou «Copiar tudo»)',
         '3. Se usar M3U, copie a lista e cole na app',
         '4. Se algo falhar, fale com o suporte',
         '',
-        ctx.perfil || ctx.iptvUser ? `• Utilizador: **${ctx.perfil || ctx.iptvUser}**` : null,
-        ctx.iptvPass ? '• Senha: disponível para copiar' : '• Senha: contacte a plural se não aparecer',
-        ctx.iptvMac ? `• MAC: **${ctx.iptvMac}**` : null,
-        ctx.iptvM3u ? '• Lista M3U: disponível para copiar' : null,
+        ...accountLines,
       ]
-        .filter(Boolean)
+        .filter((line) => line !== null)
         .join('\n'),
       suggestions: ['Copiar credenciais', 'Como usar M3U?', 'Quando renovo?', 'Falar com suporte'],
       actions: [
         { type: 'tab', label: 'Abrir IPTV', tab: 'servico' },
         ...(creds ? ([{ type: 'copy', label: 'Copiar tudo', text: creds }] as AssistantAction[]) : []),
-        ...(ctx.iptvM3u
-          ? ([{ type: 'copy', label: 'Copiar só M3U', text: ctx.iptvM3u }] as AssistantAction[])
+        ...(m3uAll
+          ? ([{ type: 'copy', label: 'Copiar só M3U', text: m3uAll }] as AssistantAction[])
           : []),
         whatsappSupport(ctx),
       ],

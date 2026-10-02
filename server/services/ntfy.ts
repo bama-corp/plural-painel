@@ -20,7 +20,7 @@ const CATEGORY_TITLE: Record<PanelAlertCategory, string> = {
   servidores: 'Servidores',
   indicacoes: 'Indicações',
   utilizadores: 'Utilizadores',
-  resumo: 'Resumo do painel',
+  resumo: 'Sino do painel',
 }
 
 const CATEGORY_TAGS: Record<PanelAlertCategory, string> = {
@@ -31,7 +31,7 @@ const CATEGORY_TAGS: Record<PanelAlertCategory, string> = {
   servidores: 'computer',
   indicacoes: 'gift',
   utilizadores: 'key',
-  resumo: 'clipboard',
+  resumo: 'bell,clipboard',
 }
 
 function baseUrl(): string {
